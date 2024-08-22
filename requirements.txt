@@ -1,0 +1,16 @@
+aiogram
+python-dotenv
+psutil
+SQLAlchemy
+alembic
+asyncpg
+beautifulsoup4
+fuzzywuzzy
+python-Levenshtein
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+random-header-generator
+pymupdf
+git+https://github.com/camelot-dev/camelot.git
+opencv-python

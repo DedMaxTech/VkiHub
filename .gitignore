@@ -1,0 +1,7 @@
+/venv
+*.pyc
+*.log
+.env
+/temp
+/bot/db/migrations/versions/*.py
+google_credentials.json

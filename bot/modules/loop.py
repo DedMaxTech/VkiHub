@@ -208,8 +208,13 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                     try:
                         old = cfg.subjects.get(user.id) or []
                         # visit latest_marks page only if no links cached already
-                        new = [await student.subject_detail(i.link) for i in (old or await student.latest_marks())]
-                        
+                        try:
+                            new = [await student.subject_detail(i.link) for i in (old or await student.latest_marks())]
+                        except ForbidenException:
+                            user.login = user.password = user.cookie = user.fio = None
+                            await session.commit()
+                            await bot.send_message(user.id, 'NSU Cab не даёт доступ к оценкам на вашем аккаунте, аккаунт отвязан. Зайдите самостоятельно на сайт и проверьте работоспасобность аккаунта. Если после перепревязки ошибка повторится, сообщите мне')
+                            
                         # find new marks
                         for old_subj in old:
                             for new_subj in new:

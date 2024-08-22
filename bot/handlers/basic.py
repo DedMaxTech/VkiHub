@@ -212,7 +212,7 @@ async def cb_clear(cb: types.CallbackQuery,session: AsyncSession,state: FSMConte
 
 @router.callback_query(F.data == CD_CLEAR_NSU)
 async def cb_link_nsu(cb: types.CallbackQuery,session: AsyncSession,state: FSMContext, user:User):
-    user.login = user.password = user.cookie = None
+    user.login = user.password = user.cookie = user.fio = None
     await session.commit()
     if user.id in cfg.subjects: del cfg.subjects[user.id]
     await cb.answer('Аккаунт НГУ отвязан', show_alert=True)

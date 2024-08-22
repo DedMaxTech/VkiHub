@@ -10,6 +10,7 @@ from config import cfg
 NSU_ENDPOINT = 'https://cab.nsu.ru'
 class WrongCookieException(Exception): pass
 class LoginFailedException(Exception): pass
+class ForbidenException(Exception): pass
 
 header_generator = HeaderGenerator(user_agents = 'scrape')
 
@@ -41,22 +42,19 @@ class Student:
         '''Получить список предметов с последними 5ю оценками'''
         async with self.session.get('/vkistudent/journal', headers={'Cookie': self.cookie}) as r:
             if len(r.history) != 0: raise WrongCookieException('Invalid cookie')
+            if r.status == 403: raise ForbidenException('Forbiden')
             
-            try:
-                last_tab = BS(await r.text(), 'html.parser').find_all(class_='tab-pane')[-1]
-                subjects = []
-                for i in last_tab.find_all(class_='item-grade'):
-                    subjects.append(
-                        Subject(
-                            name = i.find(class_='name').text.strip(), 
-                            link = i['href'].split('?')[0], 
-                            marks = [Mark(None,None,None, i.text, None) for i in i.find_all(class_='badge')]
-                        ))
-                return subjects
-            except Exception as e: 
-                with open(cfg.base_dir/'temp/last_tab.html', 'w') as file:
-                    file.write(await r.text())
-                raise e
+            last_tab = BS(await r.text(), 'html.parser').find_all(class_='tab-pane')[-1]
+            subjects = []
+            for i in last_tab.find_all(class_='item-grade'):
+                subjects.append(
+                    Subject(
+                        name = i.find(class_='name').text.strip(), 
+                        link = i['href'].split('?')[0], 
+                        marks = [Mark(None,None,None, i.text, None) for i in i.find_all(class_='badge')]
+                    ))
+            return subjects
+
         
     async def subject_detail(self, link) -> Subject:
         """Получить все оценки по предмету
@@ -66,6 +64,7 @@ class Student:
         """
         async with self.session.get(link, headers={'Cookie': self.cookie}) as r:
             if len(r.history) != 0: raise WrongCookieException('Invalid cookie')
+            if r.status == 403: raise ForbidenException('Forbiden')
             
             soup = BS(await r.text(), 'html.parser')
             
@@ -86,6 +85,7 @@ class Student:
         '''Получить свои приказы'''
         async with self.session.get('/vkistudent/orders', headers={'Cookie': self.cookie}) as r:
             if len(r.history) != 0: raise WrongCookieException('Invalid cookie')
+            if r.status == 403: raise ForbidenException('Forbiden')
             
             orders = []
             for row in BS(await r.text(), 'html.parser').find('table', class_='table-nsu').find_all('tr'):

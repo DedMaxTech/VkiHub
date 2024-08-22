@@ -5,6 +5,7 @@ from random_header_generator import HeaderGenerator
 from utils import delete_spaces
 
 from .types import *
+from config import cfg
 
 NSU_ENDPOINT = 'https://cab.nsu.ru'
 class WrongCookieException(Exception): pass
@@ -41,16 +42,21 @@ class Student:
         async with self.session.get('/vkistudent/journal', headers={'Cookie': self.cookie}) as r:
             if len(r.history) != 0: raise WrongCookieException('Invalid cookie')
             
-            last_tab = BS(await r.text(), 'html.parser').find_all(class_='tab-pane')[-1]
-            subjects = []
-            for i in last_tab.find_all(class_='item-grade'):
-                subjects.append(
-                    Subject(
-                        name = i.find(class_='name').text.strip(), 
-                        link = i['href'].split('?')[0], 
-                        marks = [Mark(None,None,None, i.text, None) for i in i.find_all(class_='badge')]
-                    ))
-            return subjects
+            try:
+                last_tab = BS(await r.text(), 'html.parser').find_all(class_='tab-pane')[-1]
+                subjects = []
+                for i in last_tab.find_all(class_='item-grade'):
+                    subjects.append(
+                        Subject(
+                            name = i.find(class_='name').text.strip(), 
+                            link = i['href'].split('?')[0], 
+                            marks = [Mark(None,None,None, i.text, None) for i in i.find_all(class_='badge')]
+                        ))
+                return subjects
+            except Exception as e: 
+                with open(cfg.base_dir/'temp/last_tab.html', 'w') as file:
+                    file.write(await r.text())
+                raise e
         
     async def subject_detail(self, link) -> Subject:
         """Получить все оценки по предмету

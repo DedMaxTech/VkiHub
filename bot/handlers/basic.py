@@ -179,7 +179,7 @@ async def config_visible(msg: types.Message, session: AsyncSession, user:User,st
             contact.tg_username = user.username
             user.is_visible = True
             await session.commit()
-            await msg.answer('Аккаунты успешно связаны, искать себя через кнопку в профиле!', reply_markup=build_timetable_markup(cfg.timetables))
+            await msg.answer('Аккаунты успешно связаны, ищи себя через кнопку в профиле!', reply_markup=build_timetable_markup(cfg.timetables))
         else: await msg.answer('Ничего не нашел, видимо ошибка... Попробуй позже')
     else: await msg.answer('Жаль, так вкишники могли бы проще друг с другом связываться(', reply_markup=build_timetable_markup(cfg.timetables))
     await state.clear()

@@ -114,7 +114,7 @@ class Contact:
     tg_username: str|None = None
     '''Ник в телеграмме'''
     def str(self):
-        return f"{self.name}\n{f'Tg: @{self.tg_username}\n' if self.tg_username else ''}{self.email}\n{self.title}"
+        return f"{self.name}\n{f'Tg: @{self.tg_username}'+'\n' if self.tg_username else ''}{self.email}\n{self.title}"
 
 def mark(m, marks_row='🟢,🟣,🟠,🔴,🚷', add_mark=False, compress=True, format=' {v}'):
     '''Преобразовать оценку'''

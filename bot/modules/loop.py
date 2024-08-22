@@ -214,6 +214,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                             user.login = user.password = user.cookie = user.fio = None
                             await session.commit()
                             await bot.send_message(user.id, 'NSU Cab не даёт доступ к оценкам на вашем аккаунте, аккаунт отвязан. Зайдите самостоятельно на сайт и проверьте работоспасобность аккаунта. Если после перепревязки ошибка повторится, сообщите мне')
+                            return
                             
                         # find new marks
                         for old_subj in old:

@@ -197,7 +197,7 @@ async def cb_clear(cb: types.CallbackQuery,session: AsyncSession,state: FSMConte
         await cb.answer('Теперь тебя не видно в поиске, очень жаль, теперь вкишникам сложнее связываться(', show_alert=True)
     else:
         if not user.fio:
-            return await cb.answer('Чтобы подтвердить свою личность, нужно сначала привязать свой аккаунт нгу', show_alert=True)
+            return await cb.answer('Чтобы подтвердить свою личность, нужно сначала (пере)привязать свой аккаунт нгу', show_alert=True)
         if not user.username:
             return await cb.answer('Чтобы тебя было видно в поиске надо чтобы у тебя был @юзернейм, пожалуйста настрой его в аккаунте телеграма', show_alert=True)
         if not contact:

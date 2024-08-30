@@ -29,6 +29,7 @@ def parse_schedule_from_pdf(timetable:Timetable):
     schedule:dict[str, dict[str, WeekDay]] = {}
     for table in tables:
         data = table.df.values.tolist()
+        if 'время' in data[0]: return # таблица первого сентября
         if len(data[0][2:])!=len(set(data[0][2:])): # Если ты не понимаешь почему эта ошибка, открывай дебаг вью камелота, скорее кривое расписание и нужно менять line_scale выше
             raise ConvertingError('Дубликаты в заголовке')
         week_dates = {} # ищем и удаляем даты с раписания

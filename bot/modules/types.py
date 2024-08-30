@@ -65,6 +65,7 @@ class Lesson:
         
         if self.classroom: t = t.replace(self.classroom, html.underline(self.classroom))
         if self.canceled: t = html.strikethrough(t)
+        if t[-1]=='.': t = t[:-1]
         return t
     @property
     def text_number(self): #замена цифры на эмодзи

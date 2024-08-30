@@ -160,7 +160,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                 for user in users:
                     if not user.timetable: continue
                     if user.timetable in cfg.teachers: # TODO changes
-                        return await bot.send_message(user.id, f'[beta] Вышло расписание для {user.timetable}\n\n' +'\n'.join([await wd.print(bot, for_teacher=True) for wd in cfg.teachers[user.timetable]]) + beta)
+                        return await bot.send_message(user.id, f'[beta] Вышло расписание для {user.timetable}\n\n' +'\n'.join([await wd.print(bot, for_teacher=True) for wd in cfg.teachers[user.timetable]]))
                     ntt = next((i for i in new_timetables if i.name == user.timetable or user.timetable in i.groups), None)
                     if ntt:
                         if user.timetable == ntt.name: # общая pdf ка
@@ -169,7 +169,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                             await send_timetable(user, f'Новое расписание для {ntt.as_str}\n\n[beta]' + ('Изменения не найдены'
                                 if not changes else f'Найдены изменения для {",".join(f"{k}: {v}шт" for k, v in changes.items())}' + '\n\nЧтобы смотреть расписание по своей группе, напиши её в чат или настрой в профиле'), ntt)
                         else: # отдельная группа
-                            await send_timetable(user, f'[beta] Новое расписание для {user.timetable}\n\n'+'\n'.join([await wd.print(bot) for wd in ntt.groups[user.timetable]])+beta, ntt)
+                            await send_timetable(user, f'[beta] Новое расписание для {user.timetable}\n\n'+'\n'.join([await wd.print(bot) for wd in ntt.groups[user.timetable]]), ntt)
                             if not diff[user.timetable]: 
                                 await bot.send_message(user.id, '[beta] Изменений не найдены')
                             elif len(diff[user.timetable]) > 20:

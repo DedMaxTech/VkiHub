@@ -33,7 +33,6 @@ class Timetable:
         return f"<Timetable {self.name} for {self.date}>"
 
 
-beta = html.spoiler('\nЭто расписание работает в тестовом режиме, пожалуйста, перепроверьте его в пдфке')
 @dataclass
 class Lesson:
     '''Ячейка-урок с парса пдфки'''

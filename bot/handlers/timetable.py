@@ -35,7 +35,7 @@ async def timetable_handler(msg: types.Message):
     if q in cfg.timetables:
         for tt in cfg.timetables:
             if q == tt.name:
-                await msg.answer(f'Расписание для {tt.name} на {tt.date.day:02d}.{tt.date.month:02d}.{tt.date.year}'+(f'\nДоступно отдельное расписание для {", ".join(sorted(set(i[:-1] for i in tt.groups)))}' if tt.groups else ''), reply_markup=build_timetable_markup(cfg.timetables))
+                await msg.answer(f'Расписание для {tt.name} на {tt.date.day:02d}.{tt.date.month:02d}.{tt.date.year}'+(f'\nДоступно отдельное расписание для {", ".join(sorted(set(i[:-1] if i[-1].isdigit() else i for i in tt.groups)))}' if tt.groups else ''), reply_markup=build_timetable_markup(cfg.timetables))
                 await msg.answer_media_group([types.InputMediaDocument(media=i) for i in tt.images])
                 return
         
@@ -48,13 +48,13 @@ async def timetable_handler(msg: types.Message):
                     break
             if gr: break
         if gr:
-            await msg.answer(f'[beta] Расписание для {grp}\n\n'+'\n'.join([await wd.print(msg.bot) for wd in gr])+beta)
+            await msg.answer(f'[beta] Расписание для {grp}\n\n'+'\n'.join([await wd.print(msg.bot) for wd in gr]))
             await msg.answer_media_group([types.InputMediaDocument(media=i) for i in tt.images])
             return
     if len(q)>3 and any(i for i in cfg.teachers if q.lower() in i.lower()):
         word, score = process.extractOne(q, [i for i in cfg.teachers if q.lower() in i.lower()])
         if score>20:
-            return await msg.answer(f'[beta] Расписание для {word}\n\n'+'\n'.join([await wd.print(msg.bot, for_teacher=True) for wd in cfg.teachers[word]]) + beta)
+            return await msg.answer(f'[beta] Расписание для {word}\n\n'+'\n'.join([await wd.print(msg.bot, for_teacher=True) for wd in cfg.teachers[word]]))
     await msg.answer(f'Такое расписание не найдено, выбери вариант ниже, или напиши свою группу или преподователя', reply_markup=build_timetable_markup(cfg.timetables))
 
 

@@ -29,22 +29,30 @@ def parse_schedule_from_pdf(timetable:Timetable):
     schedule:dict[str, dict[str, WeekDay]] = {}
     for table in tables:
         data = table.df.values.tolist()
-        if 'время' in data[0]: return # таблица первого сентября
+        if 'время' in data[0]: continue # таблица первого сентября
         if len(data[0][2:])!=len(set(data[0][2:])): # Если ты не понимаешь почему эта ошибка, открывай дебаг вью камелота, скорее кривое расписание и нужно менять line_scale выше
             raise ConvertingError('Дубликаты в заголовке')
+        if data[0][1] not in ('', '№ \nПАРЫ'):
+            for i in data:
+                i.insert(1, '')
         week_dates = {} # ищем и удаляем даты с раписания
         last_day = None # для фикса ситуации когда у ряда нет дня недели/цифры пары
+        last_number = 0 # для фикса при отсутсвии номеров пар
         for i in range(1, len(data)):
             if not data[i][0] and not data[i][1] and last_day and any(data[i][j] for j in range(2, len(data[i]))):
                 data[i][0] = last_day 
                 data[i][1] = str(int(data[i-1][1])+1) # TODO: писать не цифру а "вне пар" (сейчас числа используются для всего)
             if data[i][0]:
+                if last_day != data[i][0]: last_number = 0
                 last_day = data[i][0]
             for j in range(2, len(data[i])):
                 t = re.findall(r'\b\d{2}\.\d{2}\.\d{2}(?:\d{2})?\b', data[i][j])
                 if t:
                     week_dates[data[i][0]] = t[0]
                     data[i][j]=''
+            if not data[i][1]:
+                last_number += 1
+                data[i][1] = str(last_number)
             if i>1 and data[i][1]==data[i-1][1] and data[i][0]==data[i-1][0]:
                 data[i][1] += '.5' # для второй полупары добавляем половинку, просто чтобы люди не запутались
 

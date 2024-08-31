@@ -60,7 +60,7 @@ class Lesson:
             if not for_teacher:
                 t = t.replace(self.teacher, html.link(self.teacher, await create_start_link(bot, 't:'+self.teacher, True)) if bot else html.underline(self.teacher))
                 if self.content and [gr for gr in self.co_groups if gr[:-1] != self.group[:-1]] and 'Дист.' not in self.content: 
-                    t += f'(+ {", ".join([html.link(gr, await create_start_link(bot, "t:"+gr, True)) for gr in self.co_groups if gr[:-1] != self.group[:-1]])})'
+                    t += f'(+ {await group_groups([gr for gr in self.co_groups if gr[:-1] != self.group[:-1]], bot)})'
             else: t = t.replace(self.teacher, ', '.join([html.link(gr, await create_start_link(bot, 't:'+gr, True)) for gr in self.co_groups]))
         
         if self.classroom: t = t.replace(self.classroom, html.underline(self.classroom))
@@ -74,6 +74,19 @@ class Lesson:
         else: return self.number
     
 weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
+async def group_groups(groups: list[str],bot=None):
+    '''Сгруппировать подгруппы в группы...'''
+    res = ''
+    groups.sort()
+    while groups:
+        t = groups[0]
+        res += html.link(t, await create_start_link(bot, 't:'+t, True)) if bot else t
+        if t[:-1]+'2' in groups: 
+            groups.remove(t[:-1]+'2')
+            res += '/' + (html.link(t[-2]+'2',await create_start_link(bot, 't:'+t[:-1]+'2', True)) if bot else t[-2]+'2')
+        groups.remove(t)
+        res += ', '
+    return res[:-2]
 
 @dataclass()
 class WeekDay:

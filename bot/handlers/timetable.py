@@ -35,7 +35,7 @@ async def timetable_handler(msg: types.Message):
     if q in cfg.timetables:
         for tt in cfg.timetables:
             if q == tt.name:
-                await msg.answer(f'Расписание для {tt.name} на {tt.date.day:02d}.{tt.date.month:02d}.{tt.date.year}'+(f'\nДоступно отдельное расписание для {", ".join(sorted(set(i[:-1] if i[-1].isdigit() else i for i in tt.groups)))}' if tt.groups else ''), reply_markup=build_timetable_markup(cfg.timetables))
+                await msg.answer(f'Расписание для {tt.name} на {tt.date.day:02d}.{tt.date.month:02d}.{tt.date.year}'+(f'\nДоступно отдельное расписание для {await group_groups(list(tt.groups), msg.bot)}, нажми чтобы посмотреть' if tt.groups else ''), reply_markup=build_timetable_markup(cfg.timetables))
                 await msg.answer_media_group([types.InputMediaDocument(media=i) for i in tt.images])
                 return
         

@@ -51,7 +51,8 @@ help_message = f'''Это бот-помошник для вкишника, он 
 Также для информации об обновлениях крайне советую подписаться на @vki_hub_bot_news
 
 По всем репортам, вопросам и предложениям пишите мне или в этот канал
-{html.italic('by @dedmaxtech')}
+
+{html.italic(f'by @dedmaxtech & {html.link("contributors", "https://github.com/DedMaxTech/VkiHub/graphs/contributors")}')}
 '''
 
 legal_notice = """Ваши данные (логин и пароль) будут храниться в базе данных бота и использоваться исключительно для авторизации и получения информации с cab.nsu.ru

@@ -61,7 +61,7 @@ class Lesson:
                 t = t.replace(self.teacher, html.link(self.teacher, await create_start_link(bot, 't:'+self.teacher, True)) if bot else html.underline(self.teacher))
                 if self.content and [gr for gr in self.co_groups if gr[:-1] != self.group[:-1]] and 'Дист.' not in self.content: 
                     t += f'(+ {await group_groups([gr for gr in self.co_groups if gr[:-1] != self.group[:-1]], bot)})'
-            else: t = t.replace(self.teacher, ', '.join([html.link(gr, await create_start_link(bot, 't:'+gr, True)) for gr in self.co_groups]))
+            else: t = t.replace(self.teacher, await group_groups(self.co_groups, bot))
         
         if self.classroom: t = t.replace(self.classroom, html.underline(self.classroom))
         if self.canceled: t = html.strikethrough(t)

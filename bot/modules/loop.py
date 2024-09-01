@@ -33,7 +33,9 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                     await loop.run_in_executor(None, parse_schedule_from_pdf, tt)
                     m = await m.edit_text(m.text+f'\nParsed {tt.name}: {", ".join(tt.groups.keys())}')
                 except ConvertingError as e:
-                    await bot.send_message(cfg.superuser, f'Failed to parse {tt.name}, {e}')    
+                    await bot.send_message(cfg.superuser, f'Failed to parse {tt.name}, {e}')
+            find_cogroups_in_timetables(cfg.timetables)
+            
             cfg.teachers = parse_teachers_timetable(cfg.timetables) # convert for teachers
         except TooManyRedirects:
             await bot.send_message(cfg.superuser, f'Failed to load timetables, to many redirects')
@@ -108,6 +110,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                         await loop.run_in_executor(None, parse_schedule_from_pdf, tt)
                     except ConvertingError as e:
                         await bot.send_message(cfg.superuser, f'Failed to parse {tt.name}, {e}')    
+                find_cogroups_in_timetables(cfg.timetables)
                 
                 
                 cfg.teachers = parse_teachers_timetable(new_timetables)

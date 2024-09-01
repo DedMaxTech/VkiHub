@@ -83,6 +83,7 @@ def parse_schedule_from_pdf(timetable:Timetable):
                         raw=row[j]
                     ))
 
+    
     for gr in schedule: # удаляем пустые пары в конце
         for wd in schedule[gr]:
             i = schedule[gr][wd]
@@ -93,8 +94,22 @@ def parse_schedule_from_pdf(timetable:Timetable):
                     t.append(x)
                     flag = True
             i.lessons = list(reversed(t))
+    
     logger.debug(f'Parsing time for {timetable.name}: {time.perf_counter()-tm:.2f}')
     timetable.groups = {gr: list(wd.values()) for gr, wd in schedule.items()}
+
+def find_cogroups_in_timetables(timetables:list[Timetable]):
+    for tt in timetables:
+        for gr in tt.groups:
+            for wd in tt.groups[gr]:
+                for l in wd.lessons:
+                    for tt2 in timetables:
+                        for gr2 in tt2.groups:
+                            for wd2 in tt2.groups[gr2]:
+                                for l2 in wd2.lessons:
+                                    if l.content and l.number == l2.number and l.content == l2.content and l2.group not in l.co_groups:
+                                        l.co_groups.append(l2.group)
+                                        l2.co_groups.append(l.group)
 
 def parse_teachers_timetable(timetables:list[Timetable]):
     '''Группирует расписание преподователей из распарсеного расписания студентов'''
@@ -104,6 +119,7 @@ def parse_teachers_timetable(timetables:list[Timetable]):
             for wd in tt.groups[gr]:
                 for l in wd.lessons:
                     if l.teacher:
+                        
                         r.setdefault(l.teacher, [])
                         d = next((i for i in r[l.teacher] if i.weekday==wd.weekday), None)
                         if d is None:

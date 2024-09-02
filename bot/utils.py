@@ -76,4 +76,4 @@ def decrypt(token: str,) -> str:
     return Fernet(cfg.encyption_key).decrypt(token.encode()).decode()
 
 en_to_ru = str.maketrans({'a': 'а','b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'e': 'е', 'j': 'ж', 'z': 'з', 
-                        'i': 'и', 'к':'к', 'l':'л', 'm':'м', 'n':'н', 'o':'о', 'p':'п', 'c':'с'})
+                        'i': 'и', 'к':'к', 'l':'л', 'm':'м', 'n':'н', 'o':'о', 'p':'п', 's':'с'})

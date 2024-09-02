@@ -106,6 +106,7 @@ def find_cogroups_in_timetables(timetables:list[Timetable]):
                     for tt2 in timetables:
                         for gr2 in tt2.groups:
                             for wd2 in tt2.groups[gr2]:
+                                if wd2.weekday != wd.weekday: continue
                                 for l2 in wd2.lessons:
                                     if l.content and l.number == l2.number and l.content == l2.content and l2.group not in l.co_groups:
                                         l.co_groups.append(l2.group)

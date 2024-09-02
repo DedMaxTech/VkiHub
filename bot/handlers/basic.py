@@ -137,6 +137,8 @@ async def set_password(msg: types.Message, session: AsyncSession, user:User,stat
             s = await Student.auth(login, password)
             p = await s.get_profile()
             p.group = p.group.translate(en_to_ru)
+            if p.group[0] == 'в' and p.group[1].isdigit():
+                p.group = p.group[1:]
             
             user.login = login
             user.password = encrypt(password)

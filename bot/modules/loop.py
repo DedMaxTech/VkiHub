@@ -214,7 +214,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                         try:
                             try:
                                 new = [await student.subject_detail(i.link) for i in (old or await student.latest_marks())]
-                            except DataMissingException: pass
+                            except DataMissingException: return
                         except ForbidenException:
                             user.login = user.password = user.cookie = user.fio = None
                             await session.commit()

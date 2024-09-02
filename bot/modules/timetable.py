@@ -32,9 +32,10 @@ def parse_schedule_from_pdf(timetable:Timetable):
         if 'время' in data[0]: continue # таблица первого сентября
         if len(data[0][2:])!=len(set(data[0][2:])): # Если ты не понимаешь почему эта ошибка, открывай дебаг вью камелота, скорее кривое расписание и нужно менять line_scale выше
             raise ConvertingError('Дубликаты в заголовке')
-        if data[0][1] not in ('', '№ \nПАРЫ'):
+        if not(data[0][1] == '' or '№' in data[0][1]):
             for i in data:
                 i.insert(1, '')
+        data[1][1] = data[1][1].split()[-1]
         week_dates = {} # ищем и удаляем даты с раписания
         last_day = None # для фикса ситуации когда у ряда нет дня недели/цифры пары
         last_number = 0 # для фикса при отсутсвии номеров пар
@@ -83,7 +84,6 @@ def parse_schedule_from_pdf(timetable:Timetable):
                         raw=row[j]
                     ))
 
-    
     for gr in schedule: # удаляем пустые пары в конце
         for wd in schedule[gr]:
             i = schedule[gr][wd]

@@ -77,11 +77,12 @@ weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четв�
 async def group_groups(groups: list[str],bot=None):
     '''Сгруппировать подгруппы в группы...'''
     res = ''
+    groups = groups.copy()
     groups.sort()
     while groups:
         t = groups[0]
         res += html.link(t, await create_start_link(bot, 't:'+t, True)) if bot else t
-        if t[:-1]+'2' in groups: 
+        if t[-1]!='2' and t[:-1]+'2' in groups: 
             groups.remove(t[:-1]+'2')
             res += '/' + (html.link(t[-2]+'2',await create_start_link(bot, 't:'+t[:-1]+'2', True)) if bot else t[-2]+'2')
         groups.remove(t)

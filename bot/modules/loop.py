@@ -110,7 +110,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                         await loop.run_in_executor(None, parse_schedule_from_pdf, tt)
                     except ConvertingError as e:
                         await bot.send_message(cfg.superuser, f'Failed to parse {tt.name}, {e}')    
-                find_cogroups_in_timetables(cfg.timetables)
+                find_cogroups_in_timetables(new_timetables)
                 
                 
                 cfg.teachers = parse_teachers_timetable(new_timetables)
@@ -170,13 +170,13 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                             changes = {gr: sum([len(diff[gr][wd]) for wd in diff[gr]]) for gr in diff if gr in ntt.groups}
                             changes = {gr: changes[gr] for gr in changes if changes[gr]}
                             await send_timetable(user, f'Новое расписание для {ntt.as_str}\n\n[beta]' + ('Изменения не найдены'
-                                if not changes else f'Найдены изменения для {",".join(f"{k}: {v}шт" for k, v in changes.items())}' + '\n\nЧтобы смотреть расписание по своей группе, напиши её в чат или настрой в профиле'), ntt)
+                                if not changes else f'Найдены изменения для {",".join(f"{k}: {v}шт" for k, v in changes.items())}' + '\n\nЧтобы бот показывал детально показывал что куда перенесли, поставь в профиле расписание по конкретной группе'), ntt)
                         else: # отдельная группа
                             await send_timetable(user, f'[beta] Новое расписание для {user.timetable}\n\n'+'\n'.join([await wd.print(bot) for wd in ntt.groups[user.timetable]]), ntt)
                             if not diff[user.timetable]: 
                                 await bot.send_message(user.id, '[beta] Изменений не найдены')
                             elif len(diff[user.timetable]) > 20:
-                                await bot.send_message(user.id, '[beta] Более 20 изменений, расписании слишком сильно отличается')
+                                await bot.send_message(user.id, '[beta] Более 20 изменений, расписания слишком сильно отличается')
                             else:
                                 s = '[beta] Найдены изменения:\n'
                                 for wd in diff[user.timetable]:

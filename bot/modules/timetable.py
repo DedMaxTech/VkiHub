@@ -25,7 +25,7 @@ def parse_schedule_from_pdf(timetable:Timetable):
     # я уже не помню как тут всё работает.....
     tm = time.perf_counter()
     # !! часто нужно калибровать числовые параметры (тестовым путём), тк меняют толщину и расположение линий в расписании
-    tables = camelot.read_pdf(str(cfg.base_dir/'temp/pdf_files'/(timetable.name+'.pdf')), pages='all',copy_text=['h', 'v'],  line_scale=53, joint_tol=15, line_tol=15, backend=ConversionBackend())
+    tables = camelot.read_pdf(str(cfg.base_dir/'temp/pdf_files'/(timetable.name+'.pdf')), pages='all',copy_text=['h', 'v'],  line_scale=53, joint_tol=13, line_tol=13, backend=ConversionBackend())
     schedule:dict[str, dict[str, WeekDay]] = {}
     for table in tables:
         data = table.df.values.tolist()

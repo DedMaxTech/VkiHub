@@ -145,7 +145,9 @@ async def set_password(msg: types.Message, session: AsyncSession, user:User,stat
             await session.commit()
             
             m = await msg.answer(f'Аккаунт НГУ найден: {p.name}, {p.group}\n{html.italic("Первичная синхронизация...")}')
-            cfg.subjects[user.id] = [await s.subject_detail(i.link) for i in await s.latest_marks()] 
+            try:
+                cfg.subjects[user.id] = [await s.subject_detail(i.link) for i in await s.latest_marks()] 
+            except DataMissingException: pass
             await m.edit_text(f'Аккаунт НГУ привязан и синхронизирован: {p.name}\nКак только тебе поставят новую оценку бот тебе напишет')
             
             # TODO устанавливать группу только если она есть в текущих раписаниях, смотри код для колбека установки группы выше
@@ -166,6 +168,8 @@ async def set_password(msg: types.Message, session: AsyncSession, user:User,stat
                 
     except LoginFailedException:
         await msg.answer('Не удалось войти, скорее всего неправильный логин/пароль, проверь данные и попробуй ещё раз', reply_markup=build_timetable_markup(cfg.timetables))
+    except DataMissingException as e:
+        await msg.answer(e.args[0]+', проверь на сайте, присутсвует ли это информация, если нет то попробуй позже, а если да то напиши мне', reply_markup=build_timetable_markup(cfg.timetables))
     
     await state.clear()
     await profile(msg, session, user)

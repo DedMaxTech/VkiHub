@@ -212,7 +212,9 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                         old = cfg.subjects.get(user.id) or []
                         # visit latest_marks page only if no links cached already
                         try:
-                            new = [await student.subject_detail(i.link) for i in (old or await student.latest_marks())]
+                            try:
+                                new = [await student.subject_detail(i.link) for i in (old or await student.latest_marks())]
+                            except DataMissingException: pass
                         except ForbidenException:
                             user.login = user.password = user.cookie = user.fio = None
                             await session.commit()

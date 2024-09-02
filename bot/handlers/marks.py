@@ -79,8 +79,10 @@ async def inline_marks(inline_query: types.InlineQuery, session: AsyncSession, u
             user.cookie = s.cookie
             await session.commit()
         if not cfg.subjects.get(user.id): 
-            cfg.subjects[user.id] = [await s.subject_detail(i.link) for i in await s.latest_marks()] 
-        
+            try:
+                cfg.subjects[user.id] = [await s.subject_detail(i.link) for i in await s.latest_marks()] 
+            except DataMissingException:
+                return await inline_query.answer(results=[], is_personal=True,cache_time=5, switch_pm_text='Оценки в профиле не найдены, проверь на сайте и попробуй ещё раз позже', switch_pm_parameter='abc')
         subj = [i for i in cfg.subjects[user.id] if i.link == link_base+subj]
         if not subj: return await inline_query.answer(results=[], is_personal=True,cache_time=5, switch_pm_text='Предмет не найден', switch_pm_parameter='abc')
         subj = subj[0]

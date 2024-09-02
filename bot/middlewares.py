@@ -90,7 +90,11 @@ class StudentMiddleware(BaseMiddleware):
             if not cfg.subjects.get(user.id): 
                 m = await event.answer('Синхронизация...')
                 async with ChatActionSender.typing(user.id, bot=event.bot):
-                    cfg.subjects[user.id] = [await s.subject_detail(i.link) for i in await s.latest_marks()] 
+                    try: 
+                        cfg.subjects[user.id] = [await s.subject_detail(i.link) for i in await s.latest_marks()] 
+                    except DataMissingException:
+                        return await event.answer('Предметы не найдены')
+                    
                 if isinstance(event, types.Message): await m.delete()
             await handler(event, data)
         except WrongCookieException:

@@ -11,6 +11,7 @@ NSU_ENDPOINT = 'https://cab.nsu.ru'
 class WrongCookieException(Exception): pass
 class LoginFailedException(Exception): pass
 class ForbidenException(Exception): pass
+class DataMissingException(Exception): pass
 
 header_generator = HeaderGenerator(user_agents = 'scrape')
 
@@ -32,9 +33,16 @@ class Student:
             if len(r.history) != 0: raise WrongCookieException('Invalid cookie')
             
             profile = BS(await r.text(), 'html.parser').find('div', class_='row featurette')
+            if not profile: raise DataMissingException('Профиль не найден')
+            
+            name = profile.find('p', class_='name')
+            group = profile.find('b', text='Группа:')
+            if not name: raise DataMissingException('ФИО не найдено')
+            if not group or not group.next_sibling: raise DataMissingException('Группа не найдена')
+            
             return Profile(
-                name = profile.find('p', class_='name').text.strip(),
-                group = profile.find('b', text='Группа:').next_sibling.strip(),
+                name = name.text.strip(),
+                group = group.next_sibling.strip(),
                 image = NSU_ENDPOINT + profile.find('img')['src']
             )
     
@@ -44,9 +52,11 @@ class Student:
             if len(r.history) != 0: raise WrongCookieException('Invalid cookie')
             if r.status == 403: raise ForbidenException('Forbiden')
             
-            last_tab = BS(await r.text(), 'html.parser').find_all(class_='tab-pane')[-1]
+            tabs = BS(await r.text(), 'html.parser').find_all(class_='tab-pane')
+            if not tabs: raise DataMissingException('Предметы не найдены')
+            
             subjects = []
-            for i in last_tab.find_all(class_='item-grade'):
+            for i in tabs[-1].find_all(class_='item-grade'):
                 subjects.append(
                     Subject(
                         name = i.find(class_='name').text.strip(), 

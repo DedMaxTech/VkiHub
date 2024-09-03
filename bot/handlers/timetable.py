@@ -54,7 +54,12 @@ async def timetable_handler(msg: types.Message):
     if len(q)>3 and any(i for i in cfg.teachers if q.lower() in i.lower()):
         word, score = process.extractOne(q, [i for i in cfg.teachers if q.lower() in i.lower()])
         if score>20:
-            return await msg.answer(f'[beta] Расписание для {word}\n\n'+'\n'.join([await wd.print(msg.bot, for_teacher=True) for wd in cfg.teachers[word]]))
+            empty_tts = [i for i in cfg.timetables if not i.groups]
+            await msg.answer(f'[beta] Расписание для {word}\n\n'+'\n'.join([await wd.print(msg.bot, for_teacher=True) for wd in cfg.teachers[word]]) + (f'\n\n❗️Note: временно невозможно получить данные из {",".join([i.name for i in empty_tts])}. Пожалуйста, перепроверьте что у {word} нет пар в файлах ниже' if empty_tts else ''), reply_markup=build_timetable_markup(cfg.timetables))
+            for i in empty_tts:
+                await msg.answer_media_group([types.InputMediaDocument(media=i) for i in i.images])
+            return 
+
     await msg.answer(f'Такое расписание не найдено, выбери вариант ниже, или напиши свою группу или преподователя', reply_markup=build_timetable_markup(cfg.timetables))
 
 

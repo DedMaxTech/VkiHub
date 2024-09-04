@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, BigInteger, DateTime, String, Boolean
 from sqlalchemy.orm import declarative_base
 import datetime
+from transliterate import translit
 
 BaseModel = declarative_base()
 
@@ -53,6 +54,12 @@ class User(BaseModel):
     def repr_mark_row(self):
         s = self.marks_row.split(',')
         return f'5={s[0]}, 4={s[1]}, 3={s[2]}, 2={s[3]}, Н={s[4]}'
+    
+    @property
+    def google_fio(self):
+        if not self.fio: return None
+        f,i,o = translit(self.fio, reversed=True).split()
+        return f+i[0]+o[0]
     
     def is_banned(self):
         res = (self.banned-datetime.datetime.now()).total_seconds()

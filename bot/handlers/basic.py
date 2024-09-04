@@ -161,7 +161,7 @@ async def set_password(msg: types.Message, session: AsyncSession, user:User,stat
             
             await s.close()
             
-        if (c:=next((i for i in cfg.contacts if i.name == user.fio), None)) and not user.is_visible:
+        if (c:=next((i for i in cfg.contacts if i.name == user.fio or i.name == user.google_fio), None)) and not user.is_visible:
             if user.username:
                 await msg.answer(f'Я нашёл твой учебный google аккаунт: {c.email}, давай свяжем аккаунт нгу, google и телеграм, благодоря этому люди в общем поиске смогут найти твой телеграм, а это очень важно, часто найти контакты человека сложно\n\nЕсли понадобиться ты всегда сможешь скрыть свой телеграм из поиска в /profile', 
                                 reply_markup=Rkb([[RM_YES, RM_NOT_LINK]], one_time=False))
@@ -181,7 +181,7 @@ async def set_password(msg: types.Message, session: AsyncSession, user:User,stat
 @router.message(ProfileStates.config_visible)
 async def config_visible(msg: types.Message, session: AsyncSession, user:User,state: FSMContext):
     if msg.text == RM_YES:
-        contact = next((i for i in cfg.contacts if i.name == user.fio), None)
+        contact = next((i for i in cfg.contacts if i.name == user.fio or i.name == user.google_fio), None)
         if contact:
             contact.tg_username = user.username
             user.is_visible = True
@@ -196,7 +196,7 @@ async def config_visible(msg: types.Message, session: AsyncSession, user:User,st
 
 @router.callback_query(F.data == CD_CHANGE_VISIBLE)
 async def cb_clear(cb: types.CallbackQuery,session: AsyncSession,state: FSMContext, user:User):
-    contact = next((i for i in cfg.contacts if i.name == user.fio), None)
+    contact = next((i for i in cfg.contacts if i.name == user.fio or i.name == user.google_fio), None)
     if user.is_visible:
         user.is_visible = False
         contact.tg_username = None

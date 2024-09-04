@@ -59,7 +59,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                 users: list[User] = (await session.scalars(select(User))).all()
                 for u in users:
                     if u.is_visible and u.fio:
-                        c = next((c for c in cfg.contacts if c.name == u.fio), None)
+                        c = next((c for c in cfg.contacts if c.name == u.fio or c.name == u.google_fio), None)
                         if c: c.tg_username = u.username
         ####################################
         

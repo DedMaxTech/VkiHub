@@ -61,6 +61,7 @@ def parse_schedule_from_pdf(timetable:Timetable):
         for i in range(1, len(data)):
             row = data[i]
             for j in range(2, len(row)):
+                if row[1].endswith('.5') and data[i][j] == data[i-1][j]: continue
                 cont = delete_spaces(row[j].replace('\n', ' '))
                 for fr, to in (('семинар', '🚌'), ('лекция дистанционно', '🛏Дист.'),  ('ауд.', ''),  # 🔍
                                     ('произв.пр.','🛠Пркт'), ('лаб.','🔬'), ('отмена','')):
@@ -131,9 +132,9 @@ def parse_teachers_timetable(timetables:list[Timetable]):
     r2 = {}
     for pr in sorted(r):
         for wd in sorted(r[pr], key=lambda x: x.weekday):
-            t = {i.number for i in wd.lessons}
+            t = {float(i.number) for i in wd.lessons}
             for i in range(1,int(max(t))):
-                if str(i) not in t:
+                if i not in t:
                     wd.lessons.append(Lesson('',str(i), '', '', '', [], ''))
             wd.lessons.sort(key=lambda x: x.number)
             r2.setdefault(pr, []).append(wd)  

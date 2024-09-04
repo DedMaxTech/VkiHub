@@ -70,7 +70,7 @@ class Lesson:
     @property
     def text_number(self): #замена цифры на эмодзи
         if self.number[0].isdigit():
-            return f'{"1️⃣,2️⃣,3️⃣,4️⃣,5️⃣".split(",")[int(self.number)-1]}{self.number[1:]}'
+            return f'{"1️⃣,2️⃣,3️⃣,4️⃣,5️⃣".split(",")[int(self.number[0])-1]}{self.number[1:]}'
         else: return self.number
     
 weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']

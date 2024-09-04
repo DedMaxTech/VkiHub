@@ -13,7 +13,7 @@ class LoginFailedException(Exception): pass
 class ForbidenException(Exception): pass
 class DataMissingException(Exception): pass
 
-header_generator = HeaderGenerator(user_agents = 'scrape')
+header_generator = HeaderGenerator()
 
 class Student:
     '''Класс для доступа к апи cab.nsu.ru'''

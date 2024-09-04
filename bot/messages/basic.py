@@ -113,12 +113,18 @@ class SubjectDetail(CallbackData, prefix="subject"):
     link: str
 
 
-def build_timetable_markup(timetables: list[Timetable], with_cancel=False):
+def build_timetable_markup(user: User, add_buttons: list[str] = None):
     grp = {}
-    for tt in timetables:
+    if not add_buttons: add_buttons = []
+    
+    for tt in cfg.timetables:
         grp.setdefault(tt.name[0], []).append(KeyboardButton(text=tt.name))
-    btns = [g[i:i+2] for g in grp.values() for i in range(0, len(g), 2) ]
-    if with_cancel: btns.insert(0, [KeyboardButton(text=RM_CANCEL)])
+    # btns = [g[i:i+2] for g in grp.values() for i in range(0, len(g), 2) ]
+    btns = [g for g in grp.values() ]
+    
+    if user.timetable: add_buttons.append('⭐️'+user.timetable)
+    if user.last_timetable and user.timetable != user.last_timetable: add_buttons.append('🕓'+user.last_timetable)
+    if add_buttons: btns.insert(0, [KeyboardButton(text=i) for i in add_buttons])
     return ReplyKeyboardMarkup(keyboard=btns, resize_keyboard=True, one_time_keyboard=False, input_field_placeholder='2301а1 / Пипич')
 
 link_base = '/vkistudent/journal/detail/'

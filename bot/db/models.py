@@ -44,6 +44,10 @@ class User(BaseModel):
     '''Cached fio from nsu.cab profile for linking'''
     is_visible = Column(Boolean, default=False)
     '''Is user visible in global search'''
+    
+    last_timetable = Column(String(64), nullable=True)
+    '''Last timetable used by user'''
+    
 
     @property
     def repr_mark_row(self):

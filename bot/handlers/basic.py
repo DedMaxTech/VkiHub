@@ -20,18 +20,18 @@ router = Router()
 
 
 @router.message(CommandStart(deep_link=True,deep_link_encoded=True)) # deep links
-async def handler(message: types.Message, command: CommandObject, state: FSMContext):
+async def handler(message: types.Message, user: User, session: AsyncSession, command: CommandObject, state: FSMContext):
     await message.delete()
     if command.args == 'support':
         await message.answer(f"Если тебе нравится бот и ты хочешь поддержать разработку то можешь скинуть копеечку на:\nСбер {html.spoiler('5469020015860902')}\nИли напиши в лс @dedmaxtech")
     if command.args == 'rules':
         await message.answer(legal_notice)
     if command.args.startswith('t:'):
-        await timetable_handler(message)
+        await timetable_handler(message, user, session)
         
 @router.message(CommandStart())
 async def cmd_start(msg: types.Message, session: AsyncSession, user:User, state: FSMContext):
-    await msg.answer(start_message, reply_markup=build_timetable_markup(cfg.timetables))
+    await msg.answer(start_message, reply_markup=build_timetable_markup(user))
     if not user.login:
         await state.set_state(ProfileStates.setup_nsu)
         await msg.answer(f'Хочешь сразу привязать аккаунт нгу для уведомлений об оценках?\nДанные для аккаунта должны дать в колледже\n\nЕсли что вдруг, то ты потом всегда можешь привязать и отвязать свой аккаунт', 
@@ -57,10 +57,10 @@ async def setup_nsu(msg: types.Message, session: AsyncSession, user:User, state:
 @router.message(ProfileStates.setup_group)
 async def setup_group(msg: types.Message, session: AsyncSession, user:User, state: FSMContext):
     if msg.text == RM_YES:
-        await msg.answer('Напиши свою группу или фамилию, если вы преподователь. Если не знаешь группу, можешь пока что выбрать общее расписание на поток', reply_markup=build_timetable_markup(cfg.timetables, True))
+        await msg.answer('Напиши свою группу или фамилию, если вы преподователь. Если не знаешь группу, можешь пока что выбрать общее расписание на поток', reply_markup=build_timetable_markup(user, [RM_CANCEL]))
         return await state.set_state(ProfileStates.set_group)
     await state.clear()
-    await msg.answer('Хорошо, если что то ты всегда можешь настроить всё в своём /profile\nТакже не забудь прочитать /help', reply_markup=build_timetable_markup(cfg.timetables))
+    await msg.answer('Хорошо, если что то ты всегда можешь настроить всё в своём /profile\nТакже не забудь прочитать /help', reply_markup=build_timetable_markup(user))
 
 @router.message(Command("help"))
 @flags.command('Памагити/ЧаВо')
@@ -78,31 +78,32 @@ async def profile(msg: types.Message, session: AsyncSession, user:User):
     else: await msg.answer(txt, reply_markup=rm)
 
 @router.message(F.text == RM_CANCEL)
-async def cmd_help(msg: types.Message, state: FSMContext):
+async def cmd_help(msg: types.Message, user:User, state: FSMContext):
     await state.clear()
-    await msg.answer("Отменено", reply_markup=build_timetable_markup(cfg.timetables))
+    await msg.answer("Отменено", reply_markup=build_timetable_markup(user))
 
 ####### Timetable config #######
 @router.callback_query(F.data == CD_SET_GROUP)
-async def update(cb: types.CallbackQuery,state: FSMContext):
+async def update(cb: types.CallbackQuery, user:User, state: FSMContext):
     await cb.answer()
-    await cb.message.answer('Выберите расписание которое будет вам приходить, можешь выбрать расписание снизу, ну или написать свою группу или фамилию, если вы преподователь', reply_markup=build_timetable_markup(cfg.timetables, True))
+    await cb.message.answer('Выберите расписание которое будет вам приходить, можешь выбрать расписание снизу, ну или написать свою группу или фамилию, если вы преподователь', reply_markup=build_timetable_markup(user, [RM_CANCEL]))
     await state.set_state(ProfileStates.set_group)
     
 @router.message(ProfileStates.set_group, F.text)
 async def newchat(msg: types.Message, session: AsyncSession, user:User,state: FSMContext):
-    q = None
-    if msg.text in cfg.timetables: q = msg.text
-    elif msg.text[0].isdigit() and (gr := next((gr for i in cfg.timetables for gr in i.groups if gr.startswith(msg.text)), None)): q = gr
-    elif (t:= next((t for t in cfg.teachers if msg.text.lower() in t.lower()), None)): q = t
-    if not q:
-        return await msg.answer('Не найдено, выбери снизу или напишу свою группу', reply_markup=build_timetable_markup(cfg.timetables, True))
+    q = q.replace('⭐️', '').replace('🕓','')
+    tt = None
+    if q in cfg.timetables: tt = q
+    elif q[0].isdigit() and (gr := next((gr for i in cfg.timetables for gr in i.groups if gr.startswith(q)), None)): tt = gr
+    elif (t:= next((t for t in cfg.teachers if q.lower() in t.lower()), None)): tt = t
+    if not tt:
+        return await msg.answer('Не найдено, выбери снизу или напишу свою группу', reply_markup=build_timetable_markup(user, [RM_CANCEL]))
     
-    user.timetable = q
+    user.timetable = tt
     await session.commit()
     
     await state.clear()
-    await msg.answer('Расписание установлено: ' + q)
+    await msg.answer('Расписание установлено: ' + tt)
     await profile(msg, session, user)
     
 @router.callback_query(F.data == CD_CLEAR_GROUP)
@@ -132,7 +133,7 @@ async def set_password(msg: types.Message, session: AsyncSession, user:User,stat
     login, password = (await state.get_data())['login'], msg.text
     try:
         await msg.delete()
-        await msg.answer(f'{login}: {html.spoiler(password)}\nПроверяю...', reply_markup=build_timetable_markup(cfg.timetables))
+        await msg.answer(f'{login}: {html.spoiler(password)}\nПроверяю...', reply_markup=build_timetable_markup(user))
         async with ChatActionSender.typing(msg.from_user.id, bot=msg.bot):
             s = await Student.auth(login, password)
             p = await s.get_profile()
@@ -169,9 +170,9 @@ async def set_password(msg: types.Message, session: AsyncSession, user:User,stat
             await msg.answer(f'Я нашёл твой учебный google аккаунт: {c.email}, можно связать аккаунт нгу, google и телеграм для общего поиска, но к сожедению у тебя нет @юзернейма. Если можешь, установи в настрйоках телеграмма свой юзернейм и привяжи аккаунты в профиле')
                 
     except LoginFailedException:
-        await msg.answer('Не удалось войти, скорее всего неправильный логин/пароль, проверь данные и попробуй ещё раз', reply_markup=build_timetable_markup(cfg.timetables))
+        await msg.answer('Не удалось войти, скорее всего неправильный логин/пароль, проверь данные и попробуй ещё раз', reply_markup=build_timetable_markup(user))
     except DataMissingException as e:
-        await msg.answer(e.args[0]+', проверь на сайте, присутсвует ли это информация, если нет то попробуй позже, а если да то напиши мне', reply_markup=build_timetable_markup(cfg.timetables))
+        await msg.answer(e.args[0]+', проверь на сайте, присутсвует ли это информация, если нет то попробуй позже, а если да то напиши мне', reply_markup=build_timetable_markup(user))
     
     await state.clear()
     await profile(msg, session, user)
@@ -185,9 +186,9 @@ async def config_visible(msg: types.Message, session: AsyncSession, user:User,st
             contact.tg_username = user.username
             user.is_visible = True
             await session.commit()
-            await msg.answer('Аккаунты успешно связаны, ищи себя через кнопку в профиле!', reply_markup=build_timetable_markup(cfg.timetables))
+            await msg.answer('Аккаунты успешно связаны, ищи себя через кнопку в профиле!', reply_markup=build_timetable_markup(user))
         else: await msg.answer('Ничего не нашел, видимо ошибка... Попробуй позже')
-    else: await msg.answer('Жаль, так вкишники могли бы проще друг с другом связываться(', reply_markup=build_timetable_markup(cfg.timetables))
+    else: await msg.answer('Жаль, так вкишники могли бы проще друг с другом связываться(', reply_markup=build_timetable_markup(user))
     await state.clear()
     await profile(msg, session, user)
     
@@ -259,7 +260,7 @@ async def set_indent(msg: types.Message, session: AsyncSession, user:User,state:
         user.marks_row = data['marks']+','+(" "*cur_indent if isinstance(cur_indent, int) else cur_indent)
         await session.commit()
         await state.clear()
-        await msg.answer('Установлено \n'+user.repr_mark_row, reply_markup=build_timetable_markup(cfg.timetables))
+        await msg.answer('Установлено \n'+user.repr_mark_row, reply_markup=build_timetable_markup(user))
         return await profile(msg, session, user)
     
     if msg.text == RM_M_LEFT:

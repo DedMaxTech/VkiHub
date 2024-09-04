@@ -46,6 +46,17 @@ def repl(text, old, new=''):
     '''replace/delete case independed'''
     return re.sub(old, new, text, flags=re.IGNORECASE)
 
+# def reduce(function, iterable, initializer=None):
+    
+#     it = iter(iterable)
+#     if initializer is None:
+#         value = next(it)
+#     else:
+#         value = initializer
+#     for element in it:
+#         value = function(value, element)
+#     return value
+
 async def send_error_message(bot:Bot,error: Exception, info: str|dict):
     '''отправка сообщений об ошибке, `info` - тг апдейт или кастомное сообщение'''
     text = f'ERROR: {error.__class__.__name__} - {error}\n'

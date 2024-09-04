@@ -140,6 +140,27 @@ def parse_teachers_timetable(timetables:list[Timetable]):
             r2.setdefault(pr, []).append(wd)  
     return r2
 
+shorter_table = {
+    '.pdf': '',
+    '\n': '',
+    'Расписание': '',
+    'студентов': '',
+    'преподователей': '',
+    'курса': 'курс',
+    'специальности ': '',
+    'специальностей ': '',
+    '09.02.07': 'прога',
+    '09.02.01': 'железо',
+    '09.02.08': '', # TODO придумать название для этого направления
+    '01.02.08': '', # TODO придумать название для этого направления
+    'и': '',
+    ' класса': 'клс.',
+    'после ': '',
+    'на': '',
+    'Информационные системы и программирование': 'программирование',
+    'Компьютерные системы и комплексы': 'железо',
+}
+from functools import reduce
 async def get_all_timetables()-> list[Timetable]:
     '''скачивает все pdf ки с сайта'''
     if not os.path.exists(cfg.base_dir / 'temp/pdf_files'): os.makedirs(cfg.base_dir / 'temp/pdf_files')
@@ -156,7 +177,9 @@ async def get_all_timetables()-> list[Timetable]:
                 if 'Основное' in link: continue
                 date = re.findall(r'\d\d.\d\d.\d\d', link)[-1] or ''
                 tt = Timetable(
-                    name=link.split('/')[-1].replace('.pdf','').replace('\n','').replace('Расписание','').replace('студентов','').replace('преподователей','').replace('курса','курс').replace('специальности ','').replace('09.02.07','программирование').replace('09.02.01','железо').replace(' класса','клс.').replace('после ','').replace('на','').replace('Информационные системы и программирование','программирование').replace('Компьютерные системы и комплексы','железо').replace(date,'').replace('  ', ' ').strip(),
+                    name=delete_spaces(reduce(lambda x,y: x.replace(y, shorter_table[y]), shorter_table, link.split('/')[-1].replace(date,''))).strip(),
+                    # name=link.split('/')[-1].translate(shorter_table).replace(date,'').strip(),
+                    # name=link.split('/')[-1].replace('.pdf','').replace('\n','').replace('Расписание','').replace('студентов','').replace('преподователей','').replace('курса','курс').replace('специальности ','').replace('09.02.07','программирование').replace('09.02.01','железо').replace(' класса','клс.').replace('после ','').replace('на','').replace('Информационные системы и программирование','программирование').replace('Компьютерные системы и комплексы','железо').replace(date,'').replace('  ', ' ').strip(),
                     link=link,
                     date=datetime.datetime(year=int(date.split('.')[2]),month=int(date.split('.')[1]),day=int(date.split('.')[0])),
                     images=[], groups={})

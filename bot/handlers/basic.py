@@ -91,7 +91,7 @@ async def update(cb: types.CallbackQuery, user:User, state: FSMContext):
     
 @router.message(ProfileStates.set_group, F.text)
 async def newchat(msg: types.Message, session: AsyncSession, user:User,state: FSMContext):
-    q = q.replace('⭐️', '').replace('🕓','')
+    q = msg.text.replace('⭐️', '').replace('🕓','')
     tt = None
     if q in cfg.timetables: tt = q
     elif q[0].isdigit() and (gr := next((gr for i in cfg.timetables for gr in i.groups if gr.startswith(q)), None)): tt = gr

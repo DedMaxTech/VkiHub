@@ -19,7 +19,21 @@ from .types import *
 class ConversionBackend(object): # кастомный бекенд для камелота, ускоряет работу раза в 3
     def convert(self, pdf_path, png_path):
         pymupdf.Document(pdf_path)[0].get_pixmap(dpi=120).save(png_path)
-        
+
+
+aliases_table = {
+    'семинар': '🚌',
+    'лекция дистанционно': '🛏Дист',
+    'дистанционная лекция': '🛏Дист',
+    'дистанционно лекция': '🛏Дист',
+    'ауд.': '',
+    'произв.пр.': '🛠Пркт',
+    'произ. практ.': '🛠Пркт',
+    'практическое занятие': '🛠Пркт',
+    'уч. практика': '🛠Пркт',
+    'лаб.': '🔬',
+    'отмена': ''
+}
 def parse_schedule_from_pdf(timetable:Timetable):
     '''Парсинг расписания из pdf'''
     # я уже не помню как тут всё работает.....
@@ -62,15 +76,11 @@ def parse_schedule_from_pdf(timetable:Timetable):
             row = data[i]
             for j in range(2, len(row)):
                 if row[1].endswith('.5') and data[i][j] == data[i-1][j]: continue
-                cont = delete_spaces(row[j].replace('\n', ' '))
-                for fr, to in (('семинар', '🚌'), ('лекция дистанционно', '🛏Дист.'),  ('ауд.', ''),  # 🔍
-                                    ('произв.пр.','🛠Пркт'), ('лаб.','🔬'), ('отмена','')):
-                    cont = repl(cont,fr,to)
-                cont = delete_spaces(cont)
+                cont = reduce(lambda x,y: repl(x,y, aliases_table[y]), aliases_table, delete_spaces(row[j].replace('\n', ' '))).strip()
                 cont = re.sub(r'(\b[A-ZА-ЯЁ]{3,}\b(?:\s+\b[A-ZА-ЯЁ]+\b)+)', lambda x: x.group(0).capitalize(), cont)
                 
-                teacher = re.findall(r'\b[А-ЯЁ][а-яё]*\s[А-ЯЁ]\.\s?[А-ЯЁ]\.?\b',row[j]) #\b[А-ЯЁ][а-яё]+\s[А-ЯЁ]\.[А-ЯЁ]\.
-                classroom = re.findall(r'\b\d{3}[a-zа-яё]?\b',row[j])
+                teacher = re.findall(r'\b[А-ЯЁ][а-яё]*\s[А-ЯЁ]\.\s?[А-ЯЁ]\.?\b',cont) #\b[А-ЯЁ][а-яё]+\s[А-ЯЁ]\.[А-ЯЁ]\.
+                classroom = re.findall(r'\b\d{3}[a-zа-яё]?\b',cont)
                 schedule.setdefault(data[0][j], {})
                 schedule[data[0][j]].setdefault(row[0], WeekDay(weekday=weekdays.index(row[0].title()),date=week_dates.get(row[0], ''),lessons=[]))
                 schedule[data[0][j]][row[0]].lessons.append(

@@ -33,7 +33,7 @@ class AuthMiddleware(BaseMiddleware):
         session = data.get('session')
         if session is None: raise Exception('Setup DbSessionMiddleware() first')
         
-        if 'group' in chat.type:
+        if chat and 'group' in chat.type:
             if chat.id != cfg.temp_group:
                 try:
                     await event.bot.send_message(chat.id, f"Бот к сожелению пока не умеет работать в группах\nНужно сильно переписать логику, если вы можете помочь, то {html.link('жду пул реквесты', 'https://github.com/DedMaxTech/VkiHub')}")

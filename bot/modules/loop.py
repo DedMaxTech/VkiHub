@@ -94,6 +94,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                 except Exception as e:
                     await send_error_message(bot, e, 'error on sending timetable for '+user.get_nick())
 
+            # cfg.timetables[-1].date = datetime.datetime(20,1,1)
 
             # detect changes
             for tt in new_timetables:
@@ -101,7 +102,6 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                 if not ott or tt.date > ott.date or tt.text_content != ott.text_content:
                     is_changed = True
             
-            # cfg.timetables[-1].date = datetime.datetime(20,1,1)
             if is_changed:
                 await pdfs_to_image(bot, [tt for tt in new_timetables if not tt.images]) # cache
                 
@@ -116,10 +116,10 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                 cfg.teachers = parse_teachers_timetable(new_timetables)
                 
                 # Testing
-                # new_timetables[-1].groups['107в2'][3].lessons[4].number = '3'
-                # new_timetables[-1].groups['107в2'][0].lessons[1] = Lesson('','1','','','',[],'')
-                # new_timetables[-1].groups['107в2'][2].lessons.append(Lesson('пара пара пара пара пара пара','4','11111','2222','3333',[],''))
-                # new_timetables[-1].groups['107в2'][3].lessons[0] = Lesson('309 Разработка программных модулей Пауль С.А ','1','','','',[],'')
+                # new_timetables[-1].groups['107в2'][2].lessons[3].number = '2'
+                # new_timetables[-1].groups['107в2'][0].lessons[1] = Lesson('','2','','','',[],'')
+                # new_timetables[-1].groups['107в2'][1].lessons.append(Lesson('пара пара пара пара пара пара','4','11111','2222','3333',[],''))
+                # new_timetables[-1].groups['107в2'][2].lessons[2] = Lesson('309 Разработка программных модулей Пауль С.А ','3','','','',[],'')
                 
                 # find difference... 
                 diff: dict[str, dict[WeekDay, list[list[Lesson|None, Lesson|None, WeekDay|None]]]] = {}
@@ -135,16 +135,17 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                             owd = next((i for i in ogrps if i.weekday == wd.weekday), None)
                             if not owd: 
                                 t = [[None, l] for l in wd.lessons if l.content]
-                            for l in wd.lessons:
-                                if not l.content: continue
-                                ol = next((i for i in owd.lessons if i.number == l.number and i.content ), None)
-                                if not ol: t.append([None, l])
-                                elif l.canceled and not ol.canceled: t.append([l, None])
-                                elif l.content != ol.content: t.append([ol, l])
-                                
-                            for ol in owd.lessons:
-                                if not ol.content: continue
-                                if not next((i for i in wd.lessons if i.number == ol.number and i.content ), None): t.append([ol, None])
+                            else:
+                                for l in wd.lessons:
+                                    if not l.content: continue
+                                    ol = next((i for i in owd.lessons if i.number == l.number and i.content ), None)
+                                    if not ol: t.append([None, l])
+                                    elif l.canceled and not ol.canceled: t.append([l, None])
+                                    elif l.content != ol.content: t.append([ol, l])
+                                    
+                                for ol in owd.lessons:
+                                    if not ol.content: continue
+                                    if not next((i for i in wd.lessons if i.number == ol.number and i.content ), None): t.append([ol, None])
                                 
                             if t: diff[gr][wd] = t
                         
@@ -163,7 +164,8 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                 for user in users:
                     if not user.timetable: continue
                     if user.timetable in cfg.teachers: # TODO changes
-                        return await bot.send_message(user.id, f'[beta] Вышло расписание для {user.timetable}\n\n' +'\n'.join([await wd.print(bot, for_teacher=True) for wd in cfg.teachers[user.timetable]]))
+                        await bot.send_message(user.id, f'[beta] Вышло расписание для {user.timetable}\n\n' +'\n'.join([await wd.print(bot, for_teacher=True) for wd in cfg.teachers[user.timetable]]))
+                        continue
                     ntt = next((i for i in new_timetables if i.name == user.timetable or user.timetable in i.groups), None)
                     if ntt:
                         if user.timetable == ntt.name: # общая pdf ка
@@ -176,7 +178,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                             if not diff[user.timetable]: 
                                 await bot.send_message(user.id, '[beta] Изменений не найдены')
                             elif len(diff[user.timetable]) > 20:
-                                await bot.send_message(user.id, '[beta] Более 20 изменений, расписания слишком сильно отличается')
+                                await bot.send_message(user.id, f'[beta] {len(diff[user.timetable])} изменений, расписания слишком сильно отличается')
                             else:
                                 s = '[beta] Найдены изменения:\n'
                                 for wd in diff[user.timetable]:
@@ -185,7 +187,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                                         if df[0] is None: s += '🟢Новая: ' + await df[1].print(bot)
                                         elif df[1] is None: s += '🔴Отмена: ' + await df[0].print(bot)
                                         elif len(df) == 3: s += '🟡Перенос: ' + await df[0].print(bot)  + f'\nна {html.underline(weekdays[df[2].weekday])} {df[2].date} {df[1].text_number} парой'
-                                        else: s += '🔵Замена: ' + await df[0].print(bot) + '\n на\n' + await df[1].print(bot)
+                                        else: s += '🔵Замена: ' + await df[0].print(bot) + '\n на\n' + await df[1].print(bot) + '\n'
                                         s += '\n'
                                     s+='\n'
                                 await bot.send_message(user.id, s)

@@ -29,7 +29,7 @@ class AuthMiddleware(BaseMiddleware):
     """Updates DB for user, adds `user: models.User` to handler"""
     async def __call__(self, handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]], event: TelegramObject, data: Dict[str, Any]):
         user: types.User = data['event_from_user']
-        chat: types.Chat = data['event_chat']
+        chat: types.Chat = data.get('event_chat')
         session = data.get('session')
         if session is None: raise Exception('Setup DbSessionMiddleware() first')
         

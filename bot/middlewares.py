@@ -3,6 +3,7 @@ from typing import Callable, Awaitable, Dict, Any
 
 from aiogram import BaseMiddleware, types
 from aiogram.types import TelegramObject
+import aiogram.exceptions
 from aiogram.dispatcher.flags import get_flag
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from aiogram.utils.chat_action import ChatActionSender
@@ -27,9 +28,19 @@ class DbSessionMiddleware(BaseMiddleware):
 class AuthMiddleware(BaseMiddleware):
     """Updates DB for user, adds `user: models.User` to handler"""
     async def __call__(self, handler: Callable[[TelegramObject, Dict[str, Any]], Awaitable[Any]], event: TelegramObject, data: Dict[str, Any]):
-        user = data['event_from_user']
+        user: types.User = data['event_from_user']
+        chat: types.Chat = data['event_chat']
         session = data.get('session')
         if session is None: raise Exception('Setup DbSessionMiddleware() first')
+        
+        if 'group' in chat.type:
+            if chat.id != cfg.temp_group:
+                try:
+                    await event.bot.send_message(chat.id, f'Бот к сожелению пока не умеет работать в группах\nНужно сильно переписать логику, если вы можете помочь, то {html.link('жду пул реквесты', 'https://github.com/DedMaxTech/VkiHub')}')
+                    await event.bot.leave_chat(chat.id)
+                except aiogram.exceptions.TelegramForbiddenError: pass
+                return
+        
         user = await session.merge(User(id=user.id, first_name=user.first_name,username=user.username,last_name=user.last_name, updated=datetime.datetime.now()))
         await session.commit()
         data['user']=user

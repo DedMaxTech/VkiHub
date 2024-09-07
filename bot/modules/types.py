@@ -59,8 +59,8 @@ class Lesson:
         if self.teacher: 
             if not for_teacher:
                 t = t.replace(self.teacher, html.link(self.teacher, await create_start_link(bot, 't:'+self.teacher, True)) if bot else html.underline(self.teacher))
-                if self.content and [gr for gr in self.co_groups if gr[:-1] != self.group[:-1]] and 'Дист.' not in self.content: 
-                    t += f'(+ {await group_groups([gr for gr in self.co_groups if gr[:-1] != self.group[:-1]], bot)})'
+                if self.content and [gr for gr in self.co_groups if gr[:-1] != self.group[:-1]] and '🛏' not in self.content: 
+                    t += f'(+ {await group_groups([gr for gr in self.co_groups if gr[:-1 if '🛏' not in self.content else -2] != self.group[:-1 if '🛏' not in self.content else -2]], bot)})'
             else: t = t.replace(self.teacher, await group_groups(self.co_groups, bot))
         
         if self.classroom: t = t.replace(self.classroom, html.underline(self.classroom))

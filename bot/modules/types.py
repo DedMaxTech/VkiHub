@@ -68,7 +68,7 @@ class Lesson:
         if self.classroom: t = t.replace(self.classroom, html.underline(self.classroom))
         if self.canceled: t = html.strikethrough(t)
         if t[-1]=='.': t = t[:-1]
-        if self.half_lesson_detected: t+=f'\n⚠️Обнаружена полупара, пожалуйста, перепроверьте расписание на {self.number.split(".")[0]} пару'
+        if self.half_lesson_detected: t+=f'\n⚠️Обнаружена полупара, пожалуйста, перепроверьте расписание на {self.number.split(".")[0]} пару. {html.link('Почему так?', 'https://github.com/DedMaxTech/VkiHub/issues/2')}'
         return t
     @property
     def text_number(self): #замена цифры на эмодзи

@@ -92,7 +92,8 @@ def parse_schedule_from_pdf(timetable:Timetable):
                         classroom=classroom[0] if classroom else '',
                         co_groups=[data[0][x] for x in range(2, len(row)) if row[j]==row[x]], # and  j!=x and data[0][j][:-1]!=data[0][x][:-1] (не считать подгруппы)
                         canceled='отмена' in row[j].lower(), 
-                        raw=row[j]
+                        raw=row[j],
+                        half_lesson_detected='.5' in row[1] or '.5' in data[min(i+1, len(data)-1)][1]
                     ))
 
     for gr in schedule: # удаляем пустые пары в конце

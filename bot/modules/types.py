@@ -53,6 +53,8 @@ class Lesson:
     '''Оригинальный контент ячейки (по приколу)'''
     canceled: bool = False
     '''Спарсеная отмена'''
+    half_lesson_detected: bool = False
+    '''На этом номере пары найдены полупары'''
     
     async def print(self, bot=None, for_teacher = False):
         t=f"{self.text_number}: {'🚫' if self.canceled else ''}{self.content or html.italic('         пропуск ')}"
@@ -66,6 +68,7 @@ class Lesson:
         if self.classroom: t = t.replace(self.classroom, html.underline(self.classroom))
         if self.canceled: t = html.strikethrough(t)
         if t[-1]=='.': t = t[:-1]
+        if self.half_lesson_detected: t+=f'\n⚠️Обнаружена полупара, пожалуйста, перепроверьте расписание на {self.number.split(".")[0]} пару'
         return t
     @property
     def text_number(self): #замена цифры на эмодзи

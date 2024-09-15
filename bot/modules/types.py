@@ -112,15 +112,19 @@ class Diff:
     
     def print(self):
         
-        match self.type:
-            case DiffType.CANCELED: 
-                return ''
-            case DiffType.NEW: 
-                self.new.print()
-            case DiffType.REPLACED: 
-                self.old.print() + '\n' + self.new.print()
-            case DiffType.MOVED: 
-                self.new_day.print()
+        # match self.type:
+        #     case DiffType.CANCELED: 
+        #         return ''
+        #     case DiffType.NEW: 
+        #         self.new.print()
+        #     case DiffType.REPLACED: 
+        #         self.old.print() + '\n' + self.new.print()
+        #     case DiffType.MOVED: 
+        #         self.new_day.print()
+        if self.type == DiffType.CANCELED: return ''
+        if self.type == DiffType.NEW: return self.new.print()
+        if self.type == DiffType.REPLACED: return self.old.print() + '\n' + self.new.print()
+        if self.type == DiffType.MOVED: return self.new_day.print()
     
     @property
     def type(self):
@@ -143,7 +147,15 @@ class WeekDay:
     
     async def print(self, bot=None, for_teacher = False):
         s=weekdays[self.weekday].title()+' '+self.date+'\n'
-        s += '\n'.join([await i.print(bot, for_teacher) for i in self.lessons])
+        # s += '\n'.join([await i.print(bot, for_teacher) for i in self.lessons])
+        for i in self.lessons: 
+            cur_num_lessons = [x for x in self.lessons if x.content and x.number[0] == i.number[0]]
+            if len(cur_num_lessons) > 1:
+                index = cur_num_lessons.index(i)
+                if index==0: s+='┏'
+                elif index == len(cur_num_lessons)-1: s+='┗'
+                else: s+='┣'
+            s += await i.print(bot, for_teacher) + '\n'
         if not self.lessons: s+='Пары не найдены'
         return s + '\n'
     def __hash__(self):

@@ -55,7 +55,7 @@ async def timetable_handler(msg: types.Message, user: User, session: AsyncSessio
             if grp != user.timetable:
                 user.last_timetable = grp
                 await session.commit()
-            await msg.answer(f'(β) Расписание для {html.link(grp, await create_start_link(msg.bot, 't:'+grp, True))}\n\n'+'\n'.join([await wd.print(msg.bot) for wd in gr]), reply_markup=build_timetable_markup(user))
+            await msg.answer(f"(β) Расписание для {html.link(grp, await create_start_link(msg.bot, 't:'+grp, True))}\n\n"+'\n'.join([await wd.print(msg.bot) for wd in gr]), reply_markup=build_timetable_markup(user))
             await msg.answer_media_group([types.InputMediaDocument(media=i) for i in tt.images])
             return
     if len(q)>3 and any(i for i in cfg.teachers if q.lower() in i.lower()):

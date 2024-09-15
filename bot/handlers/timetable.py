@@ -66,7 +66,7 @@ async def timetable_handler(msg: types.Message, user: User, session: AsyncSessio
                 await session.commit()
             empty_tts = [i for i in cfg.timetables if not i.groups]
             
-            await msg.answer(f'(β) Расписание для {html.link(next((c.name for c in cfg.contacts if word.split(' ')[0] in c.name), word), await create_start_link(msg.bot, 't:'+word, True))}\n\n'+'\n'.join([await wd.print(msg.bot, for_teacher=True) for wd in cfg.teachers[word]]) + (f'\n\n❗️Note: временно невозможно получить данные из {",".join([i.name for i in empty_tts])}. Пожалуйста, перепроверьте что у {word} нет пар в файлах ниже' if empty_tts else ''), reply_markup=build_timetable_markup(user))
+            await msg.answer(f"(β) Расписание для {html.link(next((c.name for c in cfg.contacts if word.split(' ')[0] in c.name), word), await create_start_link(msg.bot, 't:'+word, True))}\n\n"+'\n'.join([await wd.print(msg.bot, for_teacher=True) for wd in cfg.teachers[word]]) + (f'\n\n❗️Note: временно невозможно получить данные из {",".join([i.name for i in empty_tts])}. Пожалуйста, перепроверьте что у {word} нет пар в файлах ниже' if empty_tts else ''), reply_markup=build_timetable_markup(user))
             for i in empty_tts:
                 await msg.answer_media_group([types.InputMediaDocument(media=i) for i in i.images]) 
             return 

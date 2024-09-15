@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import datetime
 from aiogram import html
 from aiogram.utils.deep_linking import create_start_link
@@ -69,7 +69,7 @@ class Lesson:
         if self.classroom: t = t.replace(self.classroom, html.underline(self.classroom))
         if self.canceled: t = html.strikethrough(t)
         if t[-1]=='.': t = t[:-1]
-        if self.half_lesson_detected: t+=f'\n⚠️Обнаружена полупара, пожалуйста, перепроверьте расписание на {self.number.split(".")[0]} пару. {html.link("Почему так?", "https://github.com/DedMaxTech/VkiHub/issues/2")}'
+        if self.half_lesson_detected: t+=f'\n⚠️Полупара, перепроверьте расписание на {self.number.split(".")[0]} пару. {html.link("Почему так?", "https://github.com/DedMaxTech/VkiHub/issues/2")}'
         return t
     @property
     def text_number(self): #замена цифры на эмодзи
@@ -98,8 +98,8 @@ async def group_groups(groups: list[str],bot=None):
 class DiffType(enum.Enum):
     CANCELED = '🔴Отмена'
     NEW = '🟢Новая'
-    REPLACED = '🟡Перенос'
-    MOVED = '🔵Замена'
+    REPLACED = '🔵Замена'
+    MOVED = '🟡Перенос'
     
     
 @dataclass
@@ -110,24 +110,14 @@ class Diff:
     
 
     
-    def print(self):
-        
-        # match self.type:
-        #     case DiffType.CANCELED: 
-        #         return ''
-        #     case DiffType.NEW: 
-        #         self.new.print()
-        #     case DiffType.REPLACED: 
-        #         self.old.print() + '\n' + self.new.print()
-        #     case DiffType.MOVED: 
-        #         self.new_day.print()
-        if self.type == DiffType.CANCELED: return ''
-        if self.type == DiffType.NEW: return self.new.print()
-        if self.type == DiffType.REPLACED: return self.old.print() + '\n' + self.new.print()
-        if self.type == DiffType.MOVED: return self.new_day.print()
+    async def print(self, bot):
+        if self.type == DiffType.CANCELED: return f"{self.type.value}: {await self.old.print(bot)}"
+        if self.type == DiffType.NEW: return f"{self.type.value}: {await self.new.print(bot)}"
+        if self.type == DiffType.REPLACED: return f"{self.type.value}: {await self.old.print(bot)}\nна {await self.new.print(bot)}"
+        if self.type == DiffType.MOVED: return f"{self.type.value}: {await self.old.print(bot)}\nна {html.underline(weekdays[self.new_day.weekday])} {self.new_day.date} {self.new.text_number}"
     
     @property
-    def type(self):
+    def type(self) -> DiffType:
         match (self.old, self.new, self.new_day):
             case (_,None, None): return DiffType.CANCELED
             case (None,_, None): return DiffType.NEW
@@ -144,6 +134,8 @@ class WeekDay:
     '''дата в формате 01.01.20, может быть пустой (часто)'''
     lessons: list[Lesson]
     '''Уроки в этот день'''
+    diffs: list[Diff] = field(default_factory=list)
+    '''Изменения в расписании на этот день'''
     
     async def print(self, bot=None, for_teacher = False):
         s=weekdays[self.weekday].title()+' '+self.date+'\n'
@@ -157,7 +149,7 @@ class WeekDay:
                 else: s+='┣'
             s += await i.print(bot, for_teacher) + '\n'
         if not self.lessons: s+='Пары не найдены'
-        return s + '\n'
+        return s
     def __hash__(self):
         return hash((self.weekday, self.date))
 

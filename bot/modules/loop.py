@@ -123,84 +123,84 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                     # new_timetables[-1].groups['107в2'][2].lessons[2] = Lesson('309 Разработка программных модулей Пауль С.А ','3','','','',[],'')
                     
                     # find difference... 
-                    # diff: dict[str, dict[WeekDay, list[list[Lesson|None, Lesson|None, WeekDay|None]]]] = {}
-                    # for tt in new_timetables:
-                    #     ott = next((i for i in cfg.timetables if i.name == tt.name), None)
-                    #     if not ott: continue
-                    #     for gr in tt.groups:
-                    #         ogrps = ott.groups.get(gr)
-                    #         if not ogrps: continue
-                    #         diff[gr] = {}
-                    #         for wd in tt.groups[gr]:
-                    #             t = []
-                    #             owd = next((i for i in ogrps if i.weekday == wd.weekday), None)
-                    #             if not owd: 
-                    #                 t = [[None, l] for l in wd.lessons if l.content]
-                    #             else:
-                    #                 for l in wd.lessons:
-                    #                     if not l.content: continue
-                    #                     ol = next((i for i in owd.lessons if i.number == l.number and i.content ), None)
-                    #                     if not ol: t.append([None, l])
-                    #                     elif l.canceled and not ol.canceled: t.append([l, None])
-                    #                     elif l.content != ol.content: t.append([ol, l])
-                                        
-                    #                 for ol in owd.lessons:
-                    #                     if not ol.content: continue
-                    #                     if not next((i for i in wd.lessons if i.number == ol.number and i.content ), None): t.append([ol, None])
-                                    
-                    #             if t: diff[gr][wd] = t
-                            
-                    #         for wd in diff[gr]:
-                    #             for df in diff[gr][wd]:
-                    #                 if df[0] is not None: continue
-                    #                 for j_wd, j_df in diff[gr].items():
-                    #                     for d in j_df:
-                    #                         if d[1] is not None: continue
-                    #                         if df[1].content.replace(df[1].classroom, '') == d[0].content.replace(d[0].classroom, ''):   
-                    #                             df[0] = d[0]
-                    #                             df.append(j_wd)
-                    #                             j_df.remove(d)
-                    # find difference...
-                    diff: dict[str, dict[WeekDay, list[Diff]]] = {}
+                    diff: dict[str, dict[WeekDay, list[list[Lesson|None, Lesson|None, WeekDay|None]]]] = {}
                     for tt in new_timetables:
                         ott = next((i for i in cfg.timetables if i.name == tt.name), None)
                         if not ott: continue
-
                         for gr in tt.groups:
                             ogrps = ott.groups.get(gr)
                             if not ogrps: continue
                             diff[gr] = {}
-
                             for wd in tt.groups[gr]:
-                                diffs = []
+                                t = []
                                 owd = next((i for i in ogrps if i.weekday == wd.weekday), None)
-                                if not owd:
-                                    diffs = [Diff(None, l) for l in wd.lessons if l.content]
+                                if not owd: 
+                                    t = [[None, l] for l in wd.lessons if l.content]
                                 else:
                                     for l in wd.lessons:
                                         if not l.content: continue
-
-                                        ol = next((i for i in owd.lessons if i.number == l.number and i.content), None)
+                                        ol = next((i for i in owd.lessons if i.number == l.number and i.content ), None)
+                                        if not ol: t.append([None, l])
+                                        elif l.canceled and not ol.canceled: t.append([l, None])
+                                        elif l.content != ol.content: t.append([ol, l])
                                         
-                                        if not ol: diffs.append(Diff(None, l))
-                                        elif l.canceled and not ol.canceled: diffs.append(Diff(l, None))
-                                        elif l.content != ol.content: diffs.append(Diff(ol, l))
-
                                     for ol in owd.lessons:
                                         if not ol.content: continue
-                                        if not next((i for i in wd.lessons if i.number == ol.number and i.content), None):
-                                            diffs.append(Diff(ol, None))
-                                
-                                if diffs: diff[gr][wd] = diffs
-
+                                        if not next((i for i in wd.lessons if i.number == ol.number and i.content ), None): t.append([ol, None])
+                                    
+                                if t: diff[gr][wd] = t
+                            
                             for wd in diff[gr]:
                                 for df in diff[gr][wd]:
-                                    # if df.old is not None: continue
-                                    for j_wd in diff[gr]:
-                                        for d in diff[gr][j_wd]:
-                                            # if d.new is not None: continue
-                                            if df.new.content.replace(df.new.classroom, '') == d.old.content.replace(d.old.classroom, ''):
-                                                df.old = d.old
+                                    if df[0] is not None: continue
+                                    for j_wd, j_df in diff[gr].items():
+                                        for d in j_df:
+                                            if d[1] is not None: continue
+                                            if df[1].content.replace(df[1].classroom, '') == d[0].content.replace(d[0].classroom, ''):   
+                                                df[0] = d[0]
+                                                df.append(j_wd)
+                                                j_df.remove(d)
+                    # find difference...
+                    # diff: dict[str, dict[WeekDay, list[Diff]]] = {}
+                    # for tt in new_timetables:
+                    #     ott = next((i for i in cfg.timetables if i.name == tt.name), None)
+                    #     if not ott: continue
+
+                    #     for gr in tt.groups:
+                    #         ogrps = ott.groups.get(gr)
+                    #         if not ogrps: continue
+                    #         diff[gr] = {}
+
+                    #         for wd in tt.groups[gr]:
+                    #             diffs = []
+                    #             owd = next((i for i in ogrps if i.weekday == wd.weekday), None)
+                    #             if not owd:
+                    #                 diffs = [Diff(None, l) for l in wd.lessons if l.content]
+                    #             else:
+                    #                 for l in wd.lessons:
+                    #                     if not l.content: continue
+
+                    #                     ol = next((i for i in owd.lessons if i.number == l.number and i.content), None)
+                                        
+                    #                     if not ol: diffs.append(Diff(None, l))
+                    #                     elif l.canceled and not ol.canceled: diffs.append(Diff(l, None))
+                    #                     elif l.content != ol.content: diffs.append(Diff(ol, l))
+
+                    #                 for ol in owd.lessons:
+                    #                     if not ol.content: continue
+                    #                     if not next((i for i in wd.lessons if i.number == ol.number and i.content), None):
+                    #                         diffs.append(Diff(ol, None))
+                                
+                    #             if diffs: diff[gr][wd] = diffs
+
+                    #         for wd in diff[gr]:
+                    #             for df in diff[gr][wd]:
+                    #                 # if df.old is not None: continue
+                    #                 for j_wd in diff[gr]:
+                    #                     for d in diff[gr][j_wd]:
+                    #                         # if d.new is not None: continue
+                    #                         if df.new.content.replace(df.new.classroom, '') == d.old.content.replace(d.old.classroom, ''):
+                    #                             df.old = d.old
                             # Сравниваем и ищем совпадения между группами уроков
                             # for wd, diffs in diff[gr].items():
                             #     for df in diffs:

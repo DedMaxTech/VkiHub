@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import datetime
 from aiogram import html
 from aiogram.utils.deep_linking import create_start_link
+import enum
 
 
 @dataclass
@@ -68,7 +69,7 @@ class Lesson:
         if self.classroom: t = t.replace(self.classroom, html.underline(self.classroom))
         if self.canceled: t = html.strikethrough(t)
         if t[-1]=='.': t = t[:-1]
-        if self.half_lesson_detected: t+=f'\n⚠️Обнаружена полупара, пожалуйста, перепроверьте расписание на {self.number.split(".")[0]} пару. {html.link('Почему так?', 'https://github.com/DedMaxTech/VkiHub/issues/2')}'
+        if self.half_lesson_detected: t+=f'\n⚠️Обнаружена полупара, пожалуйста, перепроверьте расписание на {self.number.split(".")[0]} пару. {html.link("Почему так?", "https://github.com/DedMaxTech/VkiHub/issues/2")}'
         return t
     @property
     def text_number(self): #замена цифры на эмодзи
@@ -91,6 +92,43 @@ async def group_groups(groups: list[str],bot=None):
         groups.remove(t)
         res += ', '
     return res[:-2]
+
+
+
+class DiffType(enum.Enum):
+    CANCELED = '🔴Отмена'
+    NEW = '🟢Новая'
+    REPLACED = '🟡Перенос'
+    MOVED = '🔵Замена'
+    
+    
+@dataclass
+class Diff:
+    old: Lesson = None
+    new: Lesson = None
+    new_day: 'WeekDay' = None
+    
+
+    
+    def print(self):
+        
+        match self.type:
+            case DiffType.CANCELED: 
+                return ''
+            case DiffType.NEW: 
+                self.new.print()
+            case DiffType.REPLACED: 
+                self.old.print() + '\n' + self.new.print()
+            case DiffType.MOVED: 
+                self.new_day.print()
+    
+    @property
+    def type(self):
+        match (self.old, self.new, self.new_day):
+            case (_,None, None): return DiffType.CANCELED
+            case (None,_, None): return DiffType.NEW
+            case (_,_, None): return DiffType.REPLACED
+            case (_,_,_): return DiffType.MOVED
 
 @dataclass()
 class WeekDay:

@@ -123,65 +123,119 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                     # new_timetables[-1].groups['107в2'][2].lessons[2] = Lesson('309 Разработка программных модулей Пауль С.А ','3','','','',[],'')
                     
                     # find difference... 
-                    diff: dict[str, dict[WeekDay, list[list[Lesson|None, Lesson|None, WeekDay|None]]]] = {}
+                    # diff: dict[str, dict[WeekDay, list[list[Lesson|None, Lesson|None, WeekDay|None]]]] = {}
+                    # for tt in new_timetables:
+                    #     ott = next((i for i in cfg.timetables if i.name == tt.name), None)
+                    #     if not ott: continue
+                    #     for gr in tt.groups:
+                    #         ogrps = ott.groups.get(gr)
+                    #         if not ogrps: continue
+                    #         diff[gr] = {}
+                    #         for wd in tt.groups[gr]:
+                    #             t = []
+                    #             owd = next((i for i in ogrps if i.weekday == wd.weekday), None)
+                    #             if not owd: 
+                    #                 t = [[None, l] for l in wd.lessons if l.content]
+                    #             else:
+                    #                 for l in wd.lessons:
+                    #                     if not l.content: continue
+                    #                     ol = next((i for i in owd.lessons if i.number == l.number and i.content ), None)
+                    #                     if not ol: t.append([None, l])
+                    #                     elif l.canceled and not ol.canceled: t.append([l, None])
+                    #                     elif l.content != ol.content: t.append([ol, l])
+                                        
+                    #                 for ol in owd.lessons:
+                    #                     if not ol.content: continue
+                    #                     if not next((i for i in wd.lessons if i.number == ol.number and i.content ), None): t.append([ol, None])
+                                    
+                    #             if t: diff[gr][wd] = t
+                            
+                    #         for wd in diff[gr]:
+                    #             for df in diff[gr][wd]:
+                    #                 if df[0] is not None: continue
+                    #                 for j_wd, j_df in diff[gr].items():
+                    #                     for d in j_df:
+                    #                         if d[1] is not None: continue
+                    #                         if df[1].content.replace(df[1].classroom, '') == d[0].content.replace(d[0].classroom, ''):   
+                    #                             df[0] = d[0]
+                    #                             df.append(j_wd)
+                    #                             j_df.remove(d)
+                    # find difference...
+                    diff: dict[str, dict[WeekDay, list[Diff]]] = {}
                     for tt in new_timetables:
                         ott = next((i for i in cfg.timetables if i.name == tt.name), None)
                         if not ott: continue
+
                         for gr in tt.groups:
                             ogrps = ott.groups.get(gr)
                             if not ogrps: continue
                             diff[gr] = {}
+
                             for wd in tt.groups[gr]:
-                                t = []
+                                diffs = []
                                 owd = next((i for i in ogrps if i.weekday == wd.weekday), None)
-                                if not owd: 
-                                    t = [[None, l] for l in wd.lessons if l.content]
+                                if not owd:
+                                    diffs = [Diff(None, l) for l in wd.lessons if l.content]
                                 else:
                                     for l in wd.lessons:
                                         if not l.content: continue
-                                        ol = next((i for i in owd.lessons if i.number == l.number and i.content ), None)
-                                        if not ol: t.append([None, l])
-                                        elif l.canceled and not ol.canceled: t.append([l, None])
-                                        elif l.content != ol.content: t.append([ol, l])
+
+                                        ol = next((i for i in owd.lessons if i.number == l.number and i.content), None)
                                         
+                                        if not ol: diffs.append(Diff(None, l))
+                                        elif l.canceled and not ol.canceled: diffs.append(Diff(l, None))
+                                        elif l.content != ol.content: diffs.append(Diff(ol, l))
+
                                     for ol in owd.lessons:
                                         if not ol.content: continue
-                                        if not next((i for i in wd.lessons if i.number == ol.number and i.content ), None): t.append([ol, None])
-                                    
-                                if t: diff[gr][wd] = t
-                            
+                                        if not next((i for i in wd.lessons if i.number == ol.number and i.content), None):
+                                            diffs.append(Diff(ol, None))
+                                
+                                if diffs: diff[gr][wd] = diffs
+
                             for wd in diff[gr]:
                                 for df in diff[gr][wd]:
-                                    if df[0] is not None: continue
-                                    for j_wd, j_df in diff[gr].items():
-                                        for d in j_df:
-                                            if d[1] is not None: continue
-                                            if df[1].content.replace(df[1].classroom, '') == d[0].content.replace(d[0].classroom, ''):   
-                                                df[0] = d[0]
-                                                df.append(j_wd)
-                                                j_df.remove(d)
+                                    # if df.old is not None: continue
+                                    for j_wd in diff[gr]:
+                                        for d in diff[gr][j_wd]:
+                                            # if d.new is not None: continue
+                                            if df.new.content.replace(df.new.classroom, '') == d.old.content.replace(d.old.classroom, ''):
+                                                df.old = d.old
+                            # Сравниваем и ищем совпадения между группами уроков
+                            # for wd, diffs in diff[gr].items():
+                            #     for df in diffs:
+                            #         if df.old is not None: continue
+
+                            #         for j_wd, j_diffs in diff[gr].items():
+                            #             for d in j_diffs:
+                            #                 if d.new is not None: continue
+
+                            #                 if df.new.content.replace(df.new.classroom, '') == d.old.content.replace(d.old.classroom, ''):
+                            #                     df.old = d.old
+                            #                     df.new_day = j_wd
+                            #                     j_diffs.remove(d)
                     
                     # send to all users
                     for user in users:
                         if not user.timetable: continue
                         if user.timetable in cfg.teachers: # TODO changes
-                            await bot.send_message(user.id, f'[beta] Вышло расписание для {user.timetable}\n\n' +'\n'.join([await wd.print(bot, for_teacher=True) for wd in cfg.teachers[user.timetable]]))
+                            await bot.send_message(user.id, f'(β) Вышло расписание для {user.timetable}\n\n' +'\n'.join([await wd.print(bot, for_teacher=True) for wd in cfg.teachers[user.timetable]]))
                             continue
                         ntt = next((i for i in new_timetables if i.name == user.timetable or user.timetable in i.groups), None)
                         if ntt:
                             if user.timetable == ntt.name: # общая pdf ка
                                 changes = {gr: sum([len(diff[gr][wd]) for wd in diff[gr]]) for gr in diff if gr in ntt.groups}
                                 changes = {gr: changes[gr] for gr in changes if changes[gr]}
-                                await send_timetable(user, f'Новое расписание для {ntt.as_str}\n\n[beta]' + ('Изменения не найдены'
+                                await send_timetable(user, f'Новое расписание для {ntt.as_str}\n\n(β)' + ('Изменения не найдены'
                                     if not changes else f'Найдены изменения для {",".join(f"{k}: {v}шт" for k, v in changes.items())}' + '\n\nЧтобы бот показывал детально показывал что куда перенесли, поставь в профиле расписание по конкретной группе'), ntt)
                             else: # отдельная группа
-                                await send_timetable(user, f'[beta] Новое расписание для {user.timetable}\n\n'+'\n'.join([await wd.print(bot) for wd in ntt.groups[user.timetable]]), ntt)
+                                await send_timetable(user, f'(β) Новое расписание для {user.timetable}\n\n'+'\n'.join([await wd.print(bot) for wd in ntt.groups[user.timetable]]), ntt)
                                 if not diff[user.timetable]: 
-                                    await bot.send_message(user.id, '[beta] Изменений не найдены')
+                                    await bot.send_message(user.id, '(β) Изменений не найдены')
                                 elif len(diff[user.timetable]) > 20:
-                                    await bot.send_message(user.id, f'[beta] {len(diff[user.timetable])} изменений, расписания слишком сильно отличается')
+                                    await bot.send_message(user.id, f'(β) {len(diff[user.timetable])} изменений, расписания слишком сильно отличается')
                                 else:
-                                    s = '[beta] Найдены изменения:\n'
+                                    s = '(β) Найдены изменения:\n'
                                     for wd in diff[user.timetable]:
                                         s+=weekdays[wd.weekday].title()+' '+wd.date+'\n'
                                         for df in diff[user.timetable][wd]:

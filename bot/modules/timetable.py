@@ -95,16 +95,26 @@ def parse_schedule_from_pdf(timetable:Timetable):
     # я уже не помню как тут всё работает.....
     tm = time.perf_counter()
     # !! часто нужно калибровать числовые параметры (тестовым путём), тк меняют толщину и расположение линий в расписании
-    tables = camelot.read_pdf(str(cfg.base_dir/'temp/pdf_files'/(timetable.name+'.pdf')), pages='all',copy_text=['h', 'v'],  line_scale=53, joint_tol=14, line_tol=14   , backend=ConversionBackend())
+    tables = camelot.read_pdf(str(cfg.base_dir/'temp/pdf_files'/(timetable.name+'.pdf')), pages='all',copy_text=['h', 'v'],  line_scale=53, joint_tol=12, line_tol=12   , backend=ConversionBackend())
     schedule:dict[str, dict[str, WeekDay]] = {}
     for table in tables:
-        data = table.df.values.tolist()
+        data: list[list[str]] = table.df.values.tolist()
         if 'время' in data[0]: continue # таблица первого сентября
-        if len(data[0][2:])!=len(set(data[0][2:])): # Если ты не понимаешь почему эта ошибка, открывай дебаг вью камелота, скорее кривое расписание и нужно менять line_scale выше
-            raise ConvertingError('Дубликаты в заголовке')
+        # if len(data[0][2:])!=len(set(data[0][2:])): # Если ты не понимаешь почему эта ошибка, открывай дебаг вью камелота, скорее кривое расписание и нужно менять line_scale выше
+        #     raise ConvertingError('Дубликаты в заголовке')
         if not(data[0][1] == '' or '№' in data[0][1]):
             for i in data:
                 i.insert(1, '')
+                
+        for i in range(2, len(data[0])):
+            if i >= len(data[0]): break
+            if data[0][i-1] == data[0][i]:
+                # удаляем столбец
+                i=i
+                for j in range(0,len(data)):
+                    data[j].pop(i)
+                    # data[j] = data[j][:i] + data[j][i+1:]
+        
         data[1][1] = data[1][1].split()[-1]
         week_dates = {} # ищем и удаляем даты с раписания
         last_day = None # для фикса ситуации когда у ряда нет дня недели/цифры пары

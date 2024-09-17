@@ -150,6 +150,9 @@ class WeekDay:
             s += await i.print(bot, for_teacher) + '\n'
         if not self.lessons: s+='Пары не найдены'
         return s
+
+    async def print_diffs(self, bot):
+        return weekdays[self.weekday].title()+' '+self.date+'\n'.join([await i.print(bot) for i in self.diffs]) + '\n'
     def __hash__(self):
         return hash((self.weekday, self.date))
 

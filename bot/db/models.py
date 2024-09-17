@@ -39,7 +39,7 @@ class User(BaseModel):
     '''nsu.cab encrypted password'''
     cookie = Column(String(64), nullable=True)
     '''Cached nsu.cab cookie'''
-    marks_row = Column(String(32), default='🟢,🟣,🟠,🔴,🚷,     ')
+    marks_row = Column(String(32), default='🟢,🟣,🟠,🔴,🚷,➖')
     '''Customized icons for marks'''
     fio = Column(String(32), nullable=True)
     '''Cached fio from nsu.cab profile for linking'''

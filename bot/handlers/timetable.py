@@ -57,6 +57,8 @@ async def timetable_handler(msg: types.Message, user: User, session: AsyncSessio
                 await session.commit()
             await msg.answer(f"(β) Расписание для {html.link(grp, await create_start_link(msg.bot, 't:'+grp, True))}\n\n"+'\n'.join([await wd.print(msg.bot) for wd in gr]), reply_markup=build_timetable_markup(user))
             await msg.answer_media_group([types.InputMediaDocument(media=i) for i in tt.images])
+            # if any(wd.diffs for wd in gr): TODO
+            #     await msg.answer('(β) Изменения в расписании:\n'+'\n'.join([await wd.print_diffs(msg.bot) for wd in gr if wd.diffs]))
             return
     if len(q)>3 and any(i for i in cfg.teachers if q.lower() in i.lower()):
         word, score = process.extractOne(q, [i for i in cfg.teachers if q.lower() in i.lower()])

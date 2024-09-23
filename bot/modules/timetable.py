@@ -115,7 +115,9 @@ def parse_schedule_from_pdf(timetable:Timetable):
                     data[j].pop(i)
                     # data[j] = data[j][:i] + data[j][i+1:]
         
-        data[1][1] = data[1][1].split()[-1]
+        try:
+            data[1][1] = data[1][1].split()[-1]
+        except IndexError: raise ConvertingError(f'IndexError in data[1][1]')
         week_dates = {} # ищем и удаляем даты с раписания
         last_day = None # для фикса ситуации когда у ряда нет дня недели/цифры пары
         last_number = 0 # для фикса при отсутсвии номеров пар

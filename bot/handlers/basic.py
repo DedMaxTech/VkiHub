@@ -14,7 +14,7 @@ from db.models import User
 from messages.basic import *
 from config import cfg
 from modules.nsu_cab import *
-from handlers.timetable import timetable_handler
+from handlers.timetable import timetable_handler, timetable_diff_handler
 
 router = Router()
 
@@ -28,6 +28,8 @@ async def handler(message: types.Message, user: User, session: AsyncSession, com
         await message.answer(legal_notice)
     if command.args.startswith('t:'):
         await timetable_handler(message, user, session)
+    if command.args.startswith('d:'):
+        await timetable_diff_handler(message, user, session)
         
 @router.message(CommandStart())
 async def cmd_start(msg: types.Message, session: AsyncSession, user:User, state: FSMContext):

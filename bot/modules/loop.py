@@ -36,7 +36,10 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                     await bot.send_message(cfg.superuser, f'Failed to parse {tt.name}, {e}')
             find_cogroups_in_timetables(cfg.timetables)
             
-            cfg.teachers = parse_teachers_timetable(cfg.timetables) # convert for teachers
+            # aud = group_timetable_by(cfg.timetables, by_classroom)
+            cfg.teachers = group_timetable_by(cfg.timetables, by_teacher) # convert for teachers
+            cfg.classrooms = group_timetable_by(cfg.timetables, by_classroom)
+            
         except TooManyRedirects:
             await bot.send_message(cfg.superuser, f'Failed to load timetables, to many redirects')
         
@@ -114,7 +117,8 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                     find_cogroups_in_timetables(new_timetables)
                     
                     
-                    cfg.teachers = parse_teachers_timetable(new_timetables)
+                    cfg.teachers = group_timetable_by(new_timetables, by_teacher) 
+                    cfg.classrooms = group_timetable_by(new_timetables, by_classroom)
                     
                     # Testing
                     # new_timetables[-1].groups['107в2'][0].lessons[1].number = '4'
@@ -182,14 +186,14 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                                     if not changes else f'Найдены изменения для {",".join(f"{k}: {v}шт" for k, v in changes.items())}' + '\n\nЧтобы бот показывал детально показывал что куда перенесли, поставь в профиле расписание по конкретной группе'), ntt)
                             else: # отдельная группа
                                 await send_timetable(user, f'(β) Новое расписание для {user.timetable}\n\n'+'\n'.join([await wd.print(bot) for wd in ntt.groups[user.timetable]]), ntt)
-                                if not diff[user.timetable]: 
-                                    await bot.send_message(user.id, '(β) Изменений не найдены')
+                                if not diff.get(user.timetable): 
+                                    await bot.send_message(user.id, '(β) Изменения не найдены')
                                 elif len(diff[user.timetable]) > 20:
                                     await bot.send_message(user.id, f'(β) {len(diff[user.timetable])} изменений, расписания слишком сильно отличается')
                                 else:
                                     s = '(β) Найдены изменения:\n'
                                     for wd in diff[user.timetable]:
-                                        s+=await wd.print(bot)+'\n'
+                                        s+=await wd.print_diffs(bot)+'\n'
                                     await bot.send_message(user.id, s)
                     
                     cfg.timetables = new_timetables

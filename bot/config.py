@@ -24,6 +24,8 @@ class Settings():
     '''cached marks from cab.nsu.ru per user id'''
     teachers : dict[str, list['WeekDay']] = {}
     '''timetable for teachers (same as for groups in timetables)'''
+    classrooms : dict[str, list['WeekDay']] = {}
+    '''timetable for classrooms (same as for groups in timetables)'''
     
 
 try: cfg = Settings()

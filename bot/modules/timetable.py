@@ -12,6 +12,7 @@ from aiogram import types
 from googleapiclient.discovery import build
 from urllib.parse import unquote
 import camelot,  re
+from typing import Callable
 
 from utils import *
 from .types import *
@@ -192,20 +193,21 @@ def find_cogroups_in_timetables(timetables:list[Timetable]):
                                         l.co_groups.append(l2.group)
                                         l2.co_groups.append(l.group)
 
-def parse_teachers_timetable(timetables:list[Timetable]):
-    '''Группирует расписание преподователей из распарсеного расписания студентов'''
+def by_teacher(lesson: Lesson): return lesson.teacher
+def by_classroom(lesson: Lesson): return lesson.classroom
+def group_timetable_by(timetables:list[Timetable], f:Callable[[Lesson], str]):
+    '''Группирует расписание по ключу из распарсеного расписания студентов'''
     r: dict[str, list['WeekDay']] = {}
     for tt in timetables:
         for gr in tt.groups:
             for wd in tt.groups[gr]:
                 for l in wd.lessons:
-                    if l.teacher:
-                        
-                        r.setdefault(l.teacher, [])
-                        d = next((i for i in r[l.teacher] if i.weekday==wd.weekday), None)
+                    if f(l):
+                        r.setdefault(f(l), [])
+                        d = next((i for i in r[f(l)] if i.weekday==wd.weekday), None)
                         if d is None:
                             d = WeekDay(weekday=wd.weekday, date=wd.date, lessons=[])
-                            r[l.teacher].append(d)
+                            r[f(l)].append(d)
                         if not next((i for i in d.lessons if i.number==l.number and i.content==l.content), None):
                             d.lessons.append(l)
     r2 = {}
@@ -218,6 +220,90 @@ def parse_teachers_timetable(timetables:list[Timetable]):
             wd.lessons.sort(key=lambda x: x.number)
             r2.setdefault(pr, []).append(wd)  
     return r2
+
+
+# def find_timetable_diff(new: dict[str, list['WeekDay']], old: dict[str, list['WeekDay']] = None):
+#     if old is None: return
+    
+#     for gr in new:
+#         ogrps = old.get(gr)
+#         if not ogrps: continue
+#         diff: dict[WeekDay, list[Diff]] = {}
+
+#         for wd in new[gr]:
+#             diffs = []
+#             owd = next((i for i in ogrps if i.weekday == wd.weekday), None)
+#             if not owd:
+#                 diffs = [Diff(None, l) for l in wd.lessons if l.content]
+#             else:
+#                 for l in wd.lessons:
+#                     if not l.content: continue
+
+#                     ol = next((i for i in owd.lessons if i.number == l.number and i.content), None)
+                    
+#                     if not ol: diffs.append(Diff(None, l))
+#                     elif l.canceled and not ol.canceled: diffs.append(Diff(l, None))
+#                     elif l.content != ol.content: diffs.append(Diff(ol, l))
+
+#                 for ol in owd.lessons:
+#                     if not ol.content: continue
+#                     if not next((i for i in wd.lessons if i.number == ol.number and i.content), None):
+#                         diffs.append(Diff(ol, None))
+            
+#             if diffs: diff[wd] = diffs
+
+#         for wd in diff:
+#             for df in diff[wd]:
+#                 if df.type != DiffType.NEW: continue
+#                 for j_wd in diff:
+#                     for d in diff[j_wd]:
+#                         if df.type != DiffType.CANCELED: continue
+#                         if df.new.content.replace(df.new.classroom, '') == d.old.content.replace(d.old.classroom, ''):
+#                             df.old = d.old
+#                             df.new_day = j_wd
+#                             diff[j_wd].remove(d)
+#             wd.diffs = diff[wd]
+def find_timetable_diff(new: dict[str, list['WeekDay']], old: dict[str, list['WeekDay']] = None):
+    if old is None: return
+    
+    for gr in new:
+        ogrps = old.get(gr)
+        if not ogrps: continue
+        diff: dict[WeekDay, list[Diff]] = {}
+
+        for wd in new[gr]:
+            diffs = []
+            owd = next((i for i in ogrps if i.weekday == wd.weekday), None)
+            if not owd:
+                diffs = [Diff(None, l) for l in wd.lessons if l.content]
+            else:
+                for l in wd.lessons:
+                    if not l.content: continue
+
+                    ol = next((i for i in owd.lessons if i.number == l.number and i.content), None)
+                    
+                    if not ol: diffs.append(Diff(None, l))
+                    elif l.canceled and not ol.canceled: diffs.append(Diff(l, None))
+                    elif l.content != ol.content: diffs.append(Diff(ol, l))
+
+                for ol in owd.lessons:
+                    if not ol.content: continue
+                    if not next((i for i in wd.lessons if i.number == ol.number and i.content), None):
+                        diffs.append(Diff(ol, None))
+            
+            if diffs: diff[wd] = diffs
+
+        for wd in diff:
+            for df in diff[wd]:
+                if df.type != DiffType.NEW: continue
+                for j_wd in diff:
+                    for d in diff[j_wd]:
+                        if df.type != DiffType.CANCELED: continue
+                        if df.new.content.replace(df.new.classroom, '') == d.old.content.replace(d.old.classroom, ''):
+                            df.old = d.old
+                            df.new_day = j_wd
+                            diff[j_wd].remove(d)
+            wd.diffs = diff[wd]
 
 shorter_table = {
     '.pdf': '',

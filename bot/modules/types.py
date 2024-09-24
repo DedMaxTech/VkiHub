@@ -66,7 +66,7 @@ class Lesson:
                     t += f"(+ {await group_groups([gr for gr in self.co_groups if gr[:-1 if '🛏' not in self.content else -2] != self.group[:-1 if '🛏' not in self.content else -2]], bot)})"
             else: t = t.replace(self.teacher, await group_groups(self.co_groups, bot))
         
-        if self.classroom: t = t.replace(self.classroom, html.underline(self.classroom))
+        if self.classroom: t = t.replace(self.classroom, html.underline(html.link(self.classroom, await create_start_link(bot, 't:'+self.classroom, True)) if bot else self.classroom))
         if self.canceled: t = html.strikethrough(t)
         if t[-1]=='.': t = t[:-1]
         if self.half_lesson_detected: t+=f'\n⚠️Полупара, перепроверьте расписание на {self.number.split(".")[0]} пару. {html.link("Почему так?", "https://github.com/DedMaxTech/VkiHub/issues/2")}'
@@ -108,8 +108,6 @@ class Diff:
     new: Lesson = None
     new_day: 'WeekDay' = None
     
-
-    
     async def print(self, bot):
         if self.type == DiffType.CANCELED: return f"{self.type.value}: {await self.old.print(bot)}"
         if self.type == DiffType.NEW: return f"{self.type.value}: {await self.new.print(bot)}"
@@ -138,7 +136,7 @@ class WeekDay:
     '''Изменения в расписании на этот день'''
     
     async def print(self, bot=None, for_teacher = False):
-        s=weekdays[self.weekday].title()+' '+self.date+'\n'
+        s=html.bold(weekdays[self.weekday].title())+' '+html.underline(self.date)+'\n'
         # s += '\n'.join([await i.print(bot, for_teacher) for i in self.lessons])
         for i in self.lessons: 
             cur_num_lessons = [x for x in self.lessons if x.content and x.number[0] == i.number[0]]

@@ -26,6 +26,11 @@ async def schedule(message: types.Message):
 async def profile_callback(cb: types.CallbackQuery):
     await cb.message.pin(True)
     await cb.message.delete_reply_markup()
+
+
+async def timetable_diff_handler(msg: types.Message, user: User, session: AsyncSession):
+    q = decode_payload(msg.text.split(' ', 1)[1])[2:] if msg.text.startswith('/start ') else msg.text
+    
     
 @router.message(F.text)
 async def timetable_handler(msg: types.Message, user: User, session: AsyncSession):
@@ -36,13 +41,15 @@ async def timetable_handler(msg: types.Message, user: User, session: AsyncSessio
     if q in cfg.timetables:
         for tt in cfg.timetables:
             if q == tt.name:
-                if tt.name != user.timetable:
-                    user.last_timetable = tt.name
-                    await session.commit()
+                # if tt.name != user.timetable:
+                #     user.last_timetable = tt.name
+                #     await session.commit()
                 await msg.answer(f'Расписание для {tt.name} на {tt.date.day:02d}.{tt.date.month:02d}.{tt.date.year}'+(f'\nДоступно отдельное расписание для {await group_groups(list(tt.groups), msg.bot)}, нажми чтобы посмотреть' if tt.groups else ''), reply_markup=build_timetable_markup(user))
                 await msg.answer_media_group([types.InputMediaDocument(media=i) for i in tt.images])
                 return
-        
+    if q in cfg.classrooms:
+        await msg.answer(f"(β) Расписание для кабинета {html.link(q, await create_start_link(msg.bot, 't:'+q, True))}\n\n"+'\n'.join([await wd.print(msg.bot, for_teacher=True) for wd in cfg.classrooms[q]]), reply_markup=build_timetable_markup(user))
+        return
     if q[0].isdigit():
         gr = None
         for tt in cfg.timetables:

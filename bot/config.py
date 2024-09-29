@@ -26,6 +26,7 @@ class Settings():
     '''timetable for teachers (same as for groups in timetables)'''
     classrooms : dict[str, list['WeekDay']] = {}
     '''timetable for classrooms (same as for groups in timetables)'''
+    last_timetable_update: datetime.datetime | None = None
     
 
 try: cfg = Settings()

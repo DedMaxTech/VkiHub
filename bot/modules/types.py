@@ -52,6 +52,8 @@ class Lesson:
     '''Группы, у который стоит точно такая же пара'''
     raw: str
     '''Оригинальный контент ячейки (по приколу)'''
+    weekday: 'WeekDay'
+    '''День недели пары'''
     canceled: bool = False
     '''Спарсеная отмена'''
     half_lesson_detected: bool = False
@@ -112,7 +114,11 @@ class Diff:
         if self.type == DiffType.CANCELED: return f"{self.type.value}: {await self.old.print(bot)}"
         if self.type == DiffType.NEW: return f"{self.type.value}: {await self.new.print(bot)}"
         if self.type == DiffType.REPLACED: return f"{self.type.value}: {await self.old.print(bot)}\nна {await self.new.print(bot)}"
-        if self.type == DiffType.MOVED: return f"{self.type.value}: {await self.old.print(bot)}\nна {html.underline(weekdays[self.new_day.weekday])} {self.new_day.date} {self.new.text_number}"
+        if self.type == DiffType.MOVED: 
+            s = f"{self.type.value}: {await self.old.print(bot)}"
+            if self.old.weekday.weekday != self.new_day.weekday or self.old.number !=self.new.number: s += f"\nна {html.underline(weekdays[self.new_day.weekday])} {self.new_day.date} {self.new.text_number} парой"
+            if self.old.classroom != self.new.classroom: s += f"\nв кабинет {self.new.classroom}"
+            return s
     
     @property
     def type(self) -> DiffType:
@@ -121,6 +127,12 @@ class Diff:
             case (None,_, None): return DiffType.NEW
             case (_,_, None): return DiffType.REPLACED
             case (_,_,_): return DiffType.MOVED
+    
+    @staticmethod
+    def changes(num:int):
+        if num == 1: return 'изменение'
+        if 1 < num < 5: return 'изменения'
+        return 'изменений'
 
 @dataclass()
 class WeekDay:
@@ -150,7 +162,7 @@ class WeekDay:
         return s
 
     async def print_diffs(self, bot):
-        return weekdays[self.weekday].title()+' '+self.date+'\n'.join([await i.print(bot) for i in self.diffs]) + '\n'
+        return html.bold(weekdays[self.weekday].title())+' '+html.underline(self.date)+'\n'+'\n\n'.join([await i.print(bot) for i in self.diffs])
     def __hash__(self):
         return hash((self.weekday, self.date))
 

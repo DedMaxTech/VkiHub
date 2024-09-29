@@ -116,60 +116,29 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                             await bot.send_message(cfg.superuser, f'Failed to parse {tt.name}, {e}')    
                     find_cogroups_in_timetables(new_timetables)
                     
-                    
-                    cfg.teachers = group_timetable_by(new_timetables, by_teacher) 
-                    cfg.classrooms = group_timetable_by(new_timetables, by_classroom)
-                    
                     # Testing
                     # new_timetables[-1].groups['107в2'][0].lessons[1].number = '4'
-                    # new_timetables[-1].groups['107в2'][0].lessons[0] = Lesson('','2','','','',[],'')
-                    # new_timetables[-1].groups['107в2'][1].lessons.append(Lesson('пара пара пара пара пара пара','5','11111','2222','3333',[],''))
-                    # new_timetables[-1].groups['107в2'][2].lessons[2] = Lesson('309 Разработка программных модулей Пауль С.А ','3','','','',[],'')
+                    # new_timetables[-1].groups['107в2'][0].lessons[1].content = new_timetables[-1].groups['107в2'][0].lessons[1].content.replace('235', '666')
+                    # new_timetables[-1].groups['107в2'][0].lessons[1].classroom = '666'
+                    # new_timetables[-1].groups['107в2'][0].lessons[0] = Lesson('','2','','','',[],'',None)
+                    # new_timetables[-1].groups['107в2'][1].lessons.append(Lesson('новая пара','1','11111','2222','3333',[],'',None))
+                    # new_timetables[-1].groups['107в2'][2].lessons[2] = Lesson('муравьи сосите','3','','','',[],'',None)
+                    # new_timetables[-1].groups['107в2'][1].lessons[3].canceled = True
+                    # l = new_timetables[-1].groups['107в2'][2].lessons.pop(0)
+                    # l.number = '5'
+                    # new_timetables[-1].groups['107в2'][1].lessons.append(l)
+                    # new_timetables[-1].groups['107в2'][2].lessons[0].content= new_timetables[-1].groups['107в2'][2].lessons[0].content.replace('414', '101')
+                    # new_timetables[-1].groups['107в2'][2].lessons[0].classroom = '101'
                     
-                    # find difference...
-                    diff: dict[str, dict[WeekDay, list[Diff]]] = {}
+                    new_teachers = group_timetable_by(new_timetables, by_teacher) 
+                    new_classrooms = group_timetable_by(new_timetables, by_classroom)
+                    
+                    
+                    
                     for tt in new_timetables:
                         ott = next((i for i in cfg.timetables if i.name == tt.name), None)
-                        if not ott: continue
-
-                        for gr in tt.groups:
-                            ogrps = ott.groups.get(gr)
-                            if not ogrps: continue
-                            diff[gr] = {}
-
-                            for wd in tt.groups[gr]:
-                                diffs = []
-                                owd = next((i for i in ogrps if i.weekday == wd.weekday), None)
-                                if not owd:
-                                    diffs = [Diff(None, l) for l in wd.lessons if l.content]
-                                else:
-                                    for l in wd.lessons:
-                                        if not l.content: continue
-
-                                        ol = next((i for i in owd.lessons if i.number == l.number and i.content), None)
-                                        
-                                        if not ol: diffs.append(Diff(None, l))
-                                        elif l.canceled and not ol.canceled: diffs.append(Diff(l, None))
-                                        elif l.content != ol.content: diffs.append(Diff(ol, l))
-
-                                    for ol in owd.lessons:
-                                        if not ol.content: continue
-                                        if not next((i for i in wd.lessons if i.number == ol.number and i.content), None):
-                                            diffs.append(Diff(ol, None))
-                                
-                                if diffs: diff[gr][wd] = diffs
-
-                            for wd in diff[gr]:
-                                for df in diff[gr][wd]:
-                                    if df.type != DiffType.NEW: continue
-                                    for j_wd in diff[gr]:
-                                        for d in diff[gr][j_wd]:
-                                            if df.type != DiffType.CANCELED: continue
-                                            if df.new.content.replace(df.new.classroom, '') == d.old.content.replace(d.old.classroom, ''):
-                                                df.old = d.old
-                                                df.new_day = j_wd
-                                                diff[gr][j_wd].remove(d)
-                                wd.diffs = diff[gr][wd]
+                        find_timetable_diff(tt.groups, ott.groups if ott else None)
+                    find_timetable_diff(new_teachers, cfg.teachers)
                     
                     # send to all users
                     for user in users:
@@ -180,23 +149,30 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                         ntt = next((i for i in new_timetables if i.name == user.timetable or user.timetable in i.groups), None)
                         if ntt:
                             if user.timetable == ntt.name: # общая pdf ка
-                                changes = {gr: sum([len(diff[gr][wd]) for wd in diff[gr]]) for gr in diff if gr in ntt.groups}
+                                # changes = {gr: sum([len(diff[gr][wd]) for wd in diff[gr]]) for gr in diff if gr in ntt.groups}
+                                # changes = {gr: changes[gr] for gr in changes if changes[gr]}
+                                changes = {gr: sum([len(wd.diffs) for wd in ntt.groups[gr]]) for gr in ntt.groups}
                                 changes = {gr: changes[gr] for gr in changes if changes[gr]}
                                 await send_timetable(user, f'Новое расписание для {ntt.as_str}\n\n(β)' + ('Изменения не найдены'
                                     if not changes else f'Найдены изменения для {",".join(f"{k}: {v}шт" for k, v in changes.items())}' + '\n\nЧтобы бот показывал детально показывал что куда перенесли, поставь в профиле расписание по конкретной группе'), ntt)
                             else: # отдельная группа
                                 await send_timetable(user, f'(β) Новое расписание для {user.timetable}\n\n'+'\n'.join([await wd.print(bot) for wd in ntt.groups[user.timetable]]), ntt)
-                                if not diff.get(user.timetable): 
+                                changes_count = sum([len(wd.diffs) for wd in ntt.groups[user.timetable]])
+                                if not changes_count: 
                                     await bot.send_message(user.id, '(β) Изменения не найдены')
-                                elif len(diff[user.timetable]) > 20:
-                                    await bot.send_message(user.id, f'(β) {len(diff[user.timetable])} изменений, расписания слишком сильно отличается')
+                                elif changes_count > 20:
+                                    await bot.send_message(user.id, f'(β) {changes_count} изменений, расписания слишком сильно отличается')
                                 else:
                                     s = '(β) Найдены изменения:\n'
-                                    for wd in diff[user.timetable]:
-                                        s+=await wd.print_diffs(bot)+'\n'
+                                    # for wd in ntt.groups[user.timetable]:
+                                    #     s+=await wd.print_diffs(bot)+'\n'
+                                    s += '\n─────────────────\n\n'.join([await wd.print_diffs(bot) for wd in ntt.groups[user.timetable] if wd.diffs])
                                     await bot.send_message(user.id, s)
                     
+                    cfg.last_timetable_update = cfg.timetables[0].date
                     cfg.timetables = new_timetables
+                    cfg.teachers = new_teachers
+                    cfg.classrooms = new_classrooms
                 
                 # helper to parse all data from nsu / per user
                 async def check_user(user: User, aiohttp_session: aiohttp.ClientSession):

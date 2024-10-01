@@ -58,7 +58,7 @@ async def timetable_handler(msg: types.Message, user: User, session: AsyncSessio
                 await msg.answer_media_group([types.InputMediaDocument(media=i) for i in tt.images])
                 return
     if q in cfg.classrooms:
-        await msg.answer(f"(β) Расписание для кабинета {html.link(q, await create_start_link(msg.bot, 't:'+q, True))}\n\n"+'\n'.join([await wd.print(msg.bot, for_teacher=True) for wd in cfg.classrooms[q]]), reply_markup=build_timetable_markup(user))
+        await msg.answer(f"(β) Расписание для кабинета {html.link(q, await create_start_link(msg.bot, 't:'+q, True))}\n\n"+'\n'.join([await wd.print(msg.bot, user,hide_teacher=False, hide_my_group=False) for wd in cfg.classrooms[q]]), reply_markup=build_timetable_markup(user))
         return
     if q[0].isdigit():
         gr = None
@@ -72,7 +72,7 @@ async def timetable_handler(msg: types.Message, user: User, session: AsyncSessio
             if grp != user.timetable:
                 user.last_timetable = grp
                 await session.commit()
-            s = f"(β) Расписание для {html.link(grp, await create_start_link(msg.bot, 't:'+grp, True))}\n\n"+'\n'.join([await wd.print(msg.bot) for wd in gr])
+            s = f"(β) Расписание для {html.link(grp, await create_start_link(msg.bot, 't:'+grp, True))}\n\n"+'\n'.join([await wd.print(msg.bot,user,hide_teacher=False, hide_my_group=True) for wd in gr])
             
             if cfg.last_timetable_update:
                 changes = sum(len(wd.diffs) for wd in gr)
@@ -91,7 +91,7 @@ async def timetable_handler(msg: types.Message, user: User, session: AsyncSessio
                 await session.commit()
             empty_tts = [i for i in cfg.timetables if not i.groups]
             
-            s = f"(β) Расписание для {html.link(next((c.name for c in cfg.contacts if teacher.split(' ')[0] in c.name and ' '+teacher.split(' ')[-1][0] in c.name and ' '+teacher[-1] in c.name), teacher), await create_start_link(msg.bot, 't:'+teacher, True))}\n\n"+'\n'.join([await wd.print(msg.bot, for_teacher=True) for wd in cfg.teachers[teacher]]) + (f'\n\n❗️Note: временно невозможно получить данные из {",".join([i.name for i in empty_tts])}. Пожалуйста, перепроверьте что у {teacher} нет пар в файлах ниже' if empty_tts else '')
+            s = f"(β) Расписание для {html.link(next((c.name for c in cfg.contacts if teacher.split(' ')[0] in c.name and ' '+teacher.split(' ')[-1][0] in c.name and ' '+teacher[-1] in c.name), teacher), await create_start_link(msg.bot, 't:'+teacher, True))}\n\n"+'\n'.join([await wd.print(msg.bot, user, hide_teacher=True, hide_my_group=False) for wd in cfg.teachers[teacher]]) + (f'\n\n❗️Note: временно невозможно получить данные из {",".join([i.name for i in empty_tts])}. Пожалуйста, перепроверьте что у {teacher} нет пар в файлах ниже' if empty_tts else '')
             if cfg.last_timetable_update:
                 changes = sum(len(wd.diffs) for wd in cfg.teachers[teacher])
                 if changes > 0: s += html.bold(f'\nНайдено {html.link(f"{changes} {Diff.changes(changes)}", await create_start_link(msg.bot, 'd:'+teacher, True))} по сравнению с {cfg.last_timetable_update.strftime("%d.%m.%Y")}')

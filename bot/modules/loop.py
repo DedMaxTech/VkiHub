@@ -144,7 +144,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                     for user in users:
                         if not user.timetable: continue
                         if user.timetable in cfg.teachers: # TODO changes
-                            await bot.send_message(user.id, f'(β) Вышло расписание для {user.timetable}\n\n' +'\n'.join([await wd.print(bot, for_teacher=True) for wd in cfg.teachers[user.timetable]]))
+                            await bot.send_message(user.id, f'(β) Вышло расписание для {user.timetable}\n\n' +'\n'.join([await wd.print(bot,user, hide_teacher=True, hide_my_group=False) for wd in cfg.teachers[user.timetable]]))
                             continue
                         ntt = next((i for i in new_timetables if i.name == user.timetable or user.timetable in i.groups), None)
                         if ntt:
@@ -156,7 +156,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                                 await send_timetable(user, f'Новое расписание для {ntt.as_str}\n\n(β)' + ('Изменения не найдены'
                                     if not changes else f'Найдены изменения для {",".join(f"{k}: {v}шт" for k, v in changes.items())}' + '\n\nЧтобы бот показывал детально показывал что куда перенесли, поставь в профиле расписание по конкретной группе'), ntt)
                             else: # отдельная группа
-                                await send_timetable(user, f'(β) Новое расписание для {user.timetable}\n\n'+'\n'.join([await wd.print(bot) for wd in ntt.groups[user.timetable]]), ntt)
+                                await send_timetable(user, f'(β) Новое расписание для {user.timetable}\n\n'+'\n'.join([await wd.print(bot, user, hide_teacher=False, hide_my_group=True) for wd in ntt.groups[user.timetable]]), ntt)
                                 changes_count = sum([len(wd.diffs) for wd in ntt.groups[user.timetable]])
                                 if not changes_count: 
                                     await bot.send_message(user.id, '(β) Изменения не найдены')

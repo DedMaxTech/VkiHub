@@ -1,3 +1,4 @@
+import json
 import random
 from aiogram import Router, html
 from aiogram.filters import Command, CommandObject, CommandStart
@@ -107,7 +108,7 @@ async def newchat(msg: types.Message, session: AsyncSession, user:User,state: FS
     await state.clear()
     await msg.answer('Расписание установлено: ' + tt)
     await profile(msg, session, user)
-    
+
 @router.callback_query(F.data == CD_CLEAR_GROUP)
 async def update(cb: types.CallbackQuery,session: AsyncSession,state: FSMContext, user:User):
     user.timetable = None
@@ -115,6 +116,37 @@ async def update(cb: types.CallbackQuery,session: AsyncSession,state: FSMContext
     await cb.answer('Рассылка отменена!', show_alert=True)
     txt, rm = bulid_profile_keyboard(user)
     await cb.message.edit_text(txt, reply_markup=rm)
+
+
+@router.callback_query(F.data == CD_SET_ABBREVIATIONS)
+async def cd_abbreviations(cb: types.CallbackQuery,session: AsyncSession,state: FSMContext, user:User):
+    await cb.answer()
+    await cb.message.answer(abbreviation_message, reply_markup=Rkb([[RM_CANCEL], [RM_ABBR_FULL], [RM_ABBR_SHORT], ['{}']], '{"a":"b"} или a=b', False))
+    await state.set_state(ProfileStates.set_abbreviations)
+    if user.abbrevioations:
+        await cb.message.answer(f'Ваши текущие сокращения: {html.pre(json.dumps(user.abbrevioations, ensure_ascii=False, indent=0))}')
+
+@router.message(ProfileStates.set_abbreviations, F.text)
+async def set_abbreviations(msg: types.Message, session: AsyncSession, user:User,state: FSMContext):
+    if msg.text == RM_ABBR_FULL: abbr = None
+    elif msg.text == RM_ABBR_SHORT: abbr = base_abbreviation
+    
+    elif msg.text[0] == '{':
+        try: abbr = json.loads(msg.text)
+        except Exception: return await msg.answer('Ошибка при парсинге json, проверьте что все строки корректны, все значения в " а не в \' и что в послнедней строке нет запятой')
+    elif '=' in msg.text:
+        abbr = {}
+        for i in msg.text.split('\n'):
+            if len(i.split('=')) != 2: return await msg.answer(f'Проверьте равно в строке "{i}"')
+            k,v = i.split('=')
+            abbr[k] = v
+    else: return await msg.answer('Не понимаю какой формат ввода, посмотри примеры')
+    
+    user.abbrevioations = abbr
+    await session.commit()
+    await state.clear()
+    await msg.answer('Сокращения сохранены', reply_markup=build_timetable_markup(user))
+    await profile(msg, session, user)
 
 ####### NSU config #######
 @router.callback_query(F.data == CD_LINK_NSU)

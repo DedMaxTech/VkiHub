@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, BigInteger, DateTime, String, Boolean
+from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import declarative_base
 import datetime
 from transliterate import translit
@@ -22,17 +23,16 @@ class User(BaseModel):
     '''Timestamp when user was created'''
     updated = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
     '''Timestamp of last update'''
-    
     banned = Column(DateTime, default=datetime.datetime.now)
     '''End of user ban time'''
 
+    # Admin notifications
     notification_chat = Column(BigInteger, nullable=True)
     '''delayed message from chat (usual superuser)'''
     notification_msg = Column(Integer, nullable=True)
     '''delayed message id in chat'''
     
-    timetable = Column(String(64), nullable=True)
-    '''Configured timetable (1 спо / 101а1 / Пипич)'''
+    # NSU part
     login = Column(String(32), nullable=True)
     '''nsu.cab login'''
     password = Column(String(128), nullable=True)
@@ -46,9 +46,13 @@ class User(BaseModel):
     is_visible = Column(Boolean, default=False)
     '''Is user visible in global search'''
     
+    # timetable part
+    timetable = Column(String(64), nullable=True)
+    '''Configured timetable (1 спо / 101а1 / Пипич)'''
     last_timetable = Column(String(64), nullable=True)
     '''Last timetable used by user'''
-    
+    abbrevioations = Column(JSON, nullable=True)
+    '''Subjects shortcuts'''
 
     @property
     def repr_mark_row(self):

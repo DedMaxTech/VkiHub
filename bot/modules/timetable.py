@@ -82,8 +82,10 @@ def parse_schedule_from_pdf(timetable:Timetable):
                 
                 teacher = re.findall(r'\b[А-ЯЁ][а-яё]*\s[А-ЯЁ]\.\s?[А-ЯЁ]\.?\b',cont) #\b[А-ЯЁ][а-яё]+\s[А-ЯЁ]\.[А-ЯЁ]\.
                 teacher = teacher[0] if teacher else ''
-                if teacher and teacher[-3] == ' ':
-                    nt = teacher[:-3] + teacher[-2:-1]
+                if teacher:
+                    nt = teacher + '.'
+                    if nt[-3] == ' ': 
+                        nt = nt[:-3] + nt[-2:]
                     cont = cont.replace(teacher, nt)
                     teacher = nt
                 classroom = re.findall(r'\b\d{3}[a-zа-яё]?\b',cont)
@@ -159,145 +161,6 @@ def group_timetable_by(timetables:list[Timetable], f:Callable[[Lesson], str]):
             r2.setdefault(pr, []).append(wd)  
     return r2
 
-
-# def find_timetable_diff(new: dict[str, list['WeekDay']], old: dict[str, list['WeekDay']] = None):
-#     if old is None: return
-    
-#     for gr in new:
-#         ogrps = old.get(gr)
-#         if not ogrps: continue
-#         diff: dict[WeekDay, list[Diff]] = {}
-
-#         for wd in new[gr]:
-#             diffs = []
-#             owd = next((i for i in ogrps if i.weekday == wd.weekday), None)
-#             if not owd:
-#                 diffs = [Diff(None, l) for l in wd.lessons if l.content]
-#             else:
-#                 for l in wd.lessons:
-#                     if not l.content: continue
-
-#                     ol = next((i for i in owd.lessons if i.number == l.number and i.content), None)
-                    
-#                     if not ol: diffs.append(Diff(None, l))
-#                     elif l.canceled and not ol.canceled: diffs.append(Diff(l, None))
-#                     elif l.content != ol.content: diffs.append(Diff(ol, l))
-
-#                 for ol in owd.lessons:
-#                     if not ol.content: continue
-#                     if not next((i for i in wd.lessons if i.number == ol.number and i.content), None):
-#                         diffs.append(Diff(ol, None))
-            
-#             if diffs: diff[wd] = diffs
-
-#         for wd in diff:
-#             for df in diff[wd]:
-#                 if df.type != DiffType.NEW: continue
-#                 for j_wd in diff:
-#                     for d in diff[j_wd]:
-#                         if df.type != DiffType.CANCELED: continue
-#                         if df.new.content.replace(df.new.classroom, '') == d.old.content.replace(d.old.classroom, ''):
-#                             df.old = d.old
-#                             df.new_day = j_wd
-#                             diff[j_wd].remove(d)
-#             wd.diffs = diff[wd]
-
-
-# def find_timetable_diff(new: dict[str, list['WeekDay']], old: dict[str, list['WeekDay']] = None):
-#     # Если старое расписание отсутствует, все новое расписание считается как новое
-#     if old is None:
-#         for group, new_weekdays in new.items():
-#             for new_day in new_weekdays:
-#                 for new_lesson in new_day.lessons:
-#                     new_day.diffs.append(Diff(new=new_lesson))
-#         return
-
-#     # Проходим по каждой группе
-#     for group, new_weekdays in new.items():
-#         old_weekdays = old.get(group, [])
-
-#         # Сравнение по дням недели
-#         for new_day in new_weekdays:
-#             old_day = next((day for day in old_weekdays if day.weekday == new_day.weekday), None)
-
-#             # Если старого дня нет, все новые уроки считаются новыми
-#             if old_day is None:
-#                 for new_lesson in new_day.lessons:
-#                     new_day.diffs.append(Diff(new=new_lesson))
-#                 continue
-
-#             # Если старый день есть, сравниваем пары
-#             for new_lesson in new_day.lessons:
-#                 old_lesson = next((lesson for lesson in old_day.lessons if lesson.number == new_lesson.number), None)
-
-#                 # Новая пара
-#                 if old_lesson is None:
-#                     new_day.diffs.append(Diff(new=new_lesson))
-#                 else:
-#                     # Пара перенесена, если она та же, но в другом дне
-#                     if old_lesson.content == new_lesson.content and old_lesson.classroom != new_lesson.classroom:
-#                         new_day.diffs.append(Diff(old=old_lesson, new=new_lesson))
-
-#                     # Замена
-#                     elif old_lesson.content != new_lesson.content:
-#                         new_day.diffs.append(Diff(old=old_lesson, new=new_lesson))
-
-#             # Поиск отмененных пар
-#             for old_lesson in old_day.lessons:
-#                 if not any(new_lesson.number == old_lesson.number for new_lesson in new_day.lessons):
-#                     new_day.diffs.append(Diff(old=old_lesson))
-
-#     # Проверяем на отмененные дни, если новые пары в новом расписании отсутствуют
-#     for group, old_weekdays in old.items():
-#         if group not in new:
-#             continue
-
-#         for old_day in old_weekdays:
-#             if not any(new_day.weekday == old_day.weekday for new_day in new[group]):
-#                 for old_lesson in old_day.lessons:
-#                     old_day.diffs.append(Diff(old=old_lesson))
-
-# def find_timetable_diff(new: dict[str, list['WeekDay']], old: dict[str, list['WeekDay']] = None):
-#     if old is None: return
-    
-#     for gr in new:
-#         ogrps = old.get(gr)
-#         if not ogrps: continue
-#         diff: dict[WeekDay, list[Diff]] = {}
-
-#         for wd in new[gr]:
-#             diffs = []
-#             owd = next((i for i in ogrps if i.weekday == wd.weekday), None)
-#             if not owd:
-#                 diffs = [Diff(None, l) for l in wd.lessons if l.content]
-#             else:
-#                 for l in wd.lessons:
-#                     if not l.content: continue
-
-#                     ol = next((i for i in owd.lessons if i.number == l.number and i.content), None)
-                    
-#                     if not ol: diffs.append(Diff(None, l))
-#                     elif l.canceled and not ol.canceled: diffs.append(Diff(l, None))
-#                     elif l.content != ol.content: diffs.append(Diff(ol, l))
-
-#                 for ol in owd.lessons:
-#                     if not ol.content: continue
-#                     if not next((i for i in wd.lessons if i.number == ol.number and i.content), None):
-#                         diffs.append(Diff(ol, None))
-            
-#             if diffs: diff[wd] = diffs
-
-#         for wd in diff:
-#             for df in diff[wd]:
-#                 if df.type != DiffType.NEW: continue
-#                 for j_wd in diff:
-#                     for d in diff[j_wd]:
-#                         if df.type != DiffType.CANCELED: continue
-#                         if df.new.content.replace(df.new.classroom, '') == d.old.content.replace(d.old.classroom, ''):
-#                             df.old = d.old
-#                             df.new_day = j_wd
-#                             diff[j_wd].remove(d)
-#             wd.diffs = list(sorted(diff[wd], key=lambda x: (x.old or x.new).number))
 def find_timetable_diff(new: dict[str, list['WeekDay']], old: dict[str, list['WeekDay']] = None):
     if old is None: return
     

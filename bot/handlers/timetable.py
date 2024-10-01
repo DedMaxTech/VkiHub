@@ -76,7 +76,7 @@ async def timetable_handler(msg: types.Message, user: User, session: AsyncSessio
             
             if cfg.last_timetable_update:
                 changes = sum(len(wd.diffs) for wd in gr)
-                if changes > 0: s += html.bold(f'\nНайдено {html.link(f"{changes} {Diff.changes(changes)}", await create_start_link(msg.bot, 'd:'+grp, True))} по сравнению с {cfg.last_timetable_update.strftime("%d.%m.%Y")}')
+                if changes > 0: s += html.bold(f'\nНайдено {html.link(f"{changes} {Diff.changes(changes)}", await create_start_link(msg.bot, "d:"+grp, True))} по сравнению с {cfg.last_timetable_update.strftime("%d.%m.%Y")}')
                 else: s+= f"\nИзменения не найдены по сравнению с {cfg.last_timetable_update.strftime('%d.%m.%Y')}"
             await msg.answer(s, reply_markup=build_timetable_markup(user))
             await msg.answer_media_group([types.InputMediaDocument(media=i) for i in tt.images])
@@ -94,7 +94,7 @@ async def timetable_handler(msg: types.Message, user: User, session: AsyncSessio
             s = f"(β) Расписание для {html.link(next((c.name for c in cfg.contacts if teacher.split(' ')[0] in c.name and ' '+teacher.split(' ')[-1][0] in c.name and ' '+teacher[-1] in c.name), teacher), await create_start_link(msg.bot, 't:'+teacher, True))}\n\n"+'\n'.join([await wd.print(msg.bot, user, hide_teacher=True, hide_my_group=False) for wd in cfg.teachers[teacher]]) + (f'\n\n❗️Note: временно невозможно получить данные из {",".join([i.name for i in empty_tts])}. Пожалуйста, перепроверьте что у {teacher} нет пар в файлах ниже' if empty_tts else '')
             if cfg.last_timetable_update:
                 changes = sum(len(wd.diffs) for wd in cfg.teachers[teacher])
-                if changes > 0: s += html.bold(f'\nНайдено {html.link(f"{changes} {Diff.changes(changes)}", await create_start_link(msg.bot, 'd:'+teacher, True))} по сравнению с {cfg.last_timetable_update.strftime("%d.%m.%Y")}')
+                if changes > 0: s += html.bold(f'\nНайдено {html.link(f"{changes} {Diff.changes(changes)}", await create_start_link(msg.bot, "d:"+teacher, True))} по сравнению с {cfg.last_timetable_update.strftime("%d.%m.%Y")}')
                 else: s+= f"\nИзменения не найдены по сравнению с {cfg.last_timetable_update.strftime('%d.%m.%Y')}"
             await msg.answer(s, reply_markup=build_timetable_markup(user))
             for i in empty_tts:

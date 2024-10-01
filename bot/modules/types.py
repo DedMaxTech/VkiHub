@@ -141,7 +141,7 @@ class Lesson:
             
             if hide_my_group:
                 if self.other_cogroups and 'дистанц' not in self.content.lower(): t+=f' (+ {await group_groups(self.other_cogroups, bot)})'
-            else: t += (' ' if hide_teacher else ':') + await group_groups(self.co_groups, bot)   
+            else: t += (' ' if hide_teacher else '| ') + await group_groups(self.co_groups, bot)   
         
         
         if self.classroom: t = t.replace(self.classroom, html.underline(html.link(self.classroom, await create_start_link(bot, 't:'+self.classroom, True)) if bot else self.classroom))

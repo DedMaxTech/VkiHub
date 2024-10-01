@@ -81,6 +81,8 @@ example = {
     "Безопасность жиннедеятельности": "БЖ",
     "кабинет": "каб",
 }
+
+enter = '\n'
 abbreviation_message = f"""
 Ты можешь настроить свой список сокращений которые будут применяться в расписании
 {html.blockquote('Зачем?')}
@@ -89,7 +91,7 @@ abbreviation_message = f"""
 Пожалуйста, отправь json словарь со строками или слова разделенные = (примеры ниже), или выбери пресет
 {html.pre(json.dumps(example, ensure_ascii=False, indent=0))}
 или
-{html.pre('\n'.join([k+'='+v for k,v in example.items()]))}
+{html.pre(enter.join([k+'='+v for k,v in example.items()]))}
 
 Чтобы не писать полный словарь с нуля, можешь использовать словарь сокращений по умолчанию
 {html.pre(json.dumps(default_abbreviation, ensure_ascii=False, indent=0))}

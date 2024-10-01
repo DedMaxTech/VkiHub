@@ -133,7 +133,7 @@ class Lesson:
     '''На этом номере пары найдены полупары'''
     
     async def print(self, bot=None, user: User=None, hide_teacher = False, hide_my_group = True):
-        t=f"{self.text_number}: {'🚫' if self.canceled else ''}{self.content or html.italic('\t\tпропуск ')}"
+        t=f"{self.text_number}: {'🚫' if self.canceled else ''}{self.content or html.italic('       пропуск ')}"
         
         if self.content:
             if hide_teacher: t = t.replace(self.teacher, '')

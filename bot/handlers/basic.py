@@ -132,7 +132,10 @@ async def set_abbreviations(msg: types.Message, session: AsyncSession, user:User
     elif msg.text == RM_ABBR_SHORT: abbr = base_abbreviation
     
     elif msg.text[0] == '{':
-        try: abbr = json.loads(msg.text)
+        try: 
+            abbr = json.loads(msg.text)
+            for k,v in abbr.items():
+                if not type(v) == str: return await msg.answer(f'Значение для "{k}" должно быть строкой')
         except Exception: return await msg.answer('Ошибка при парсинге json, проверьте что все строки корректны, все значения в " а не в \' и что в послнедней строке нет запятой')
     elif '=' in msg.text:
         abbr = {}

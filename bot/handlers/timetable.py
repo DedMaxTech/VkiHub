@@ -39,6 +39,7 @@ async def timetable_diff_handler(msg: types.Message, user: User, session: AsyncS
     else: wds = cfg.teachers.get(q)
     
     if wds is None: return await msg.answer('Расписание (и изменения) не найдены')
+    if cfg.last_timetable_update is None: return await msg.answer('Изменения не найдены')
     if sum(len(wd.diffs) for wd in wds) == 0: return await msg.answer(f'Изменения для {html.link(q, await create_start_link(msg.bot, "t:"+q, True))} по сравнению с расписанием от {cfg.last_timetable_update.strftime("%d.%m.%Y")} не найдены', reply_markup=build_timetable_markup(user))
     await msg.answer(f'Изменения для {html.link(q, await create_start_link(msg.bot, "t:"+q, True))} по сравнению с расписанием от {cfg.last_timetable_update.strftime("%d.%m.%Y")}:\n\n'+'\n─────────────────\n\n'.join([await wd.print_diffs(msg.bot) for wd in wds if wd.diffs]), reply_markup=build_timetable_markup(user))
     

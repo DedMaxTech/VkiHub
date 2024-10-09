@@ -89,6 +89,7 @@ def parse_schedule_from_pdf(timetable:Timetable):
                     cont = cont.replace(teacher, nt)
                     teacher = nt
                 classroom = re.findall(r'\b\d{3}[a-zа-яё]?\b',cont)
+                classroom=classroom[0] if classroom else ''
                 if not classroom and 'Читальный зал' in cont: classroom = 'Читальный зал'
                 if not classroom and 'Актовый зал' in cont: classroom = 'Актовый зал'
                 schedule.setdefault(data[0][j], {})
@@ -99,7 +100,7 @@ def parse_schedule_from_pdf(timetable:Timetable):
                         number=row[1],
                         group=data[0][j],
                         teacher=teacher,
-                        classroom=classroom[0] if classroom else '',
+                        classroom=classroom,
                         co_groups=[data[0][x] for x in range(2, len(row)) if row[j]==row[x]], # and  j!=x and data[0][j][:-1]!=data[0][x][:-1] (не считать подгруппы)
                         canceled='отмена' in row[j].lower(), 
                         raw=row[j],

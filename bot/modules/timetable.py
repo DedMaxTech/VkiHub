@@ -75,6 +75,7 @@ def parse_schedule_from_pdf(timetable:Timetable):
         # тут уже тупо распихиваем готовую инфу и форматируем текст
         for i in range(1, len(data)):
             row = data[i]
+            if '\n' in row[1]: raise ConvertingError('Некорректный номер пары')
             for j in range(2, len(row)):
                 if row[1].endswith('.5') and data[i][j] == data[i-1][j]: continue
                 cont = delete_spaces(row[j].replace('\n', ' ')).replace('..', '.').strip(' .\n\t')

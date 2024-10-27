@@ -186,6 +186,7 @@ async def set_password(msg: types.Message, session: AsyncSession, user:User,stat
             
             m = await msg.answer(f'Аккаунт НГУ найден: {p.name}, {p.group}\n{html.italic("Первичная синхронизация...")}')
             try:
+                a = await s.latest_marks()
                 cfg.subjects[user.id] = [await s.subject_detail(i.link) for i in await s.latest_marks()] 
             except DataMissingException: pass
             await m.edit_text(f'Аккаунт НГУ привязан и синхронизирован: {p.name}\nКак только тебе поставят новую оценку бот тебе напишет')
@@ -286,7 +287,7 @@ async def set_marks(msg: types.Message, session: AsyncSession, user:User,state: 
     await state.update_data(marks=msg.text)
     await msg.answer("К сожелению, на каждом устройстве отступы отображаются по разному, так что ты можешь настроить их под себя\n\nЛибо устнови отступы (отличаются от устройства к устройству), либо отправь эмодзи заполнитель (всегда выглядит одинакого)\n\nНастрой так, чтобы все предметы были на одном уровне",
                      reply_markup=indents_kb)
-    await msg.answer("Выбери и я покажу как это будет выглядеть", reply_markup=build_marks_kb(example_data, msg.text+",     ", True))
+    await msg.answer("Выбери и я покажу как это будет выглядеть", reply_markup=build_marks_kb(example_data, msg.text+",     "))
     await state.set_state(ProfileStates.set_indent)
 
 @router.message(ProfileStates.set_indent, F.text)
@@ -317,6 +318,6 @@ async def set_indent(msg: types.Message, session: AsyncSession, user:User,state:
 
     await state.update_data(indent=cur_indent)
     
-    await msg.answer("Так нормально?", reply_markup=build_marks_kb(example_data, data['marks']+","+(" "*cur_indent if isinstance(cur_indent, int) else cur_indent), True))
+    await msg.answer("Так нормально?", reply_markup=build_marks_kb(example_data, data['marks']+","+(" "*cur_indent if isinstance(cur_indent, int) else cur_indent)))
     
     

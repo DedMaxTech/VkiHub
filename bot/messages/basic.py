@@ -176,15 +176,14 @@ def build_timetable_markup(user: User, add_buttons: list[str] = None):
 
 link_base = '/vkistudent/journal/detail/'
 
-def build_marks_kb(marks: list[Subject],  marks_row, use_callbacks = False, add_buttons: list[list[InlineKeyboardButton]] = []):
+def build_marks_kb(marks: list[Subject],  marks_row, add_buttons: list[list[InlineKeyboardButton]] = []):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text = ''.join([(mark(mk.mark, marks_row, format='{v},') or marks_row.split(',')[-2])
                             if mk else fill
                             for mk, fill in zip_longest(i.marks[-5:], [marks_row.split(',')[-1]]*5)])\
                     +i.name + "‎  "*30+'.' , 
-            switch_inline_query_current_chat='!s'+base64.b64encode(i.link.replace(link_base,'').encode()).decode() if not use_callbacks else None,
-            callback_data=SubjectDetail(link=i.link.replace(link_base,'')).pack() if use_callbacks else None
+            switch_inline_query_current_chat='!s '+i.name,
         )]
         for i in marks
     ]+add_buttons)

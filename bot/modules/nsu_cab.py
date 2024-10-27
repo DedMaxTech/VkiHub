@@ -60,7 +60,7 @@ class Student:
                 subjects.append(
                     Subject(
                         name = i.find(class_='name').text.strip(), 
-                        link = i['href'].split('?')[0], 
+                        link = i['href'], 
                         marks = [Mark(None,None,None, i.text, None) for i in i.find_all(class_='badge')]
                     ))
             return subjects

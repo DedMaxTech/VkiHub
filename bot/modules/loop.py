@@ -33,8 +33,10 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                 try:
                     await loop.run_in_executor(None, parse_schedule_from_pdf, tt)
                     m = await m.edit_text(m.text+f'\nParsed {tt.name}: {", ".join(tt.groups.keys())}')
-                except ConvertingError as e:
-                    await bot.send_message(cfg.superuser, f'Failed to parse {tt.name}, {e}')
+                # except ConvertingError as e:
+                #     await bot.send_message(cfg.superuser, f'Failed to parse {tt.name}, {e}')
+                except Exception as e:
+                    await send_error_message(bot, e, f'Failed to parse {tt.name}, skipped')
             find_cogroups_in_timetables(cfg.timetables)
             
             # aud = group_timetable_by(cfg.timetables, by_classroom)
@@ -113,8 +115,10 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                     for tt in new_timetables: # parse
                         try:
                             await loop.run_in_executor(None, parse_schedule_from_pdf, tt)
-                        except ConvertingError as e:
-                            await bot.send_message(cfg.superuser, f'Failed to parse {tt.name}, {e}')    
+                        # except ConvertingError as e:
+                        #     await bot.send_message(cfg.superuser, f'Failed to parse {tt.name}, {e}') 
+                        except Exception as e:
+                            await send_error_message(bot, e, f'Failed to parse {tt.name}, skipped')   
                     find_cogroups_in_timetables(new_timetables)
                     
                     # Testing

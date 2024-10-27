@@ -33,29 +33,8 @@ async def cmd_marksv2(msg: types.Message, session: AsyncSession, user:User, stud
         msg = msg.message
 
     await msg.answer(f'Последние 5 оценок\n{user.repr_mark_row}\nСтарые➡️Новые',
-                    reply_markup=build_marks_kb(cfg.subjects[user.id], user.marks_row, use_callbacks=False,
-                                                add_buttons=[[InlineKeyboardButton(text = 'Смотреть через сообщения(👎)', callback_data=CD_MARKS)]]))
+                    reply_markup=build_marks_kb(cfg.subjects[user.id], user.marks_row))
 
-
-@router.callback_query(F.data == CD_MARKS)
-@flags.student
-async def cmd_marks(cb: types.CallbackQuery, session: AsyncSession, user:User, student: Student):
-    await cb.message.edit_text(f'Последние 5 оценок\n{user.repr_mark_row}\nNote: Лучше используй дефолтный вариант с inline режимом', 
-                               reply_markup=build_marks_kb(cfg.subjects[user.id], user.marks_row, use_callbacks=True,
-                                                           add_buttons=[[InlineKeyboardButton(text = 'Открыть нормальный вариант дневника', callback_data=CD_MARKS_V2)]]))
-
-
-@router.callback_query(SubjectDetail.filter())
-@flags.student
-async def callback_marks(cb: types.CallbackQuery, callback_data: SubjectDetail, session: AsyncSession, user:User):
-    if callback_data.link == '1': return await cb.answer('Зачем жмал')
-    kb = InlineKeyboardBuilder()
-    subj = [i for i in cfg.subjects[user.id] if i.link == link_base+callback_data.link][0]
-    for i in subj.marks:
-        if i.are_empty: continue
-        kb.button(text = f'{i.date}: {"🚷" if i.is_absent else ""}{mark(i.mark, user.marks_row)} {i.theme}' + ("🟰"*80 if i.type=="КН" else "‎  "*50)+'.', callback_data='1')
-    kb.button(text = '⬅️Назад', callback_data=CD_MARKS)
-    await cb.message.edit_text(subj.name, reply_markup=kb.adjust(1).as_markup())
 
 @router.callback_query(F.data == '1')
 async def callback_marks(cb: types.CallbackQuery, session: AsyncSession, user:User):
@@ -68,11 +47,6 @@ async def inline_marks(inline_query: types.InlineQuery, session: AsyncSession, u
         return await inline_query.answer(results=[], is_personal=True,cache_time=5, switch_pm_text='Необходимо привязать аккаунт НГУ', switch_pm_parameter='abc')
     
     try:
-        subj = base64.b64decode(inline_query.query[2:]).decode('utf-8')
-    except Exception:
-        return await inline_query.answer(results=[], is_personal=True,cache_time=5, switch_pm_text='Не меняй строку поиска!', switch_pm_parameter='abc')
-    
-    try:
         if user.cookie: s = Student(user.cookie)
         else: 
             s = await Student.auth(user.login, decrypt(user.password))
@@ -83,9 +57,8 @@ async def inline_marks(inline_query: types.InlineQuery, session: AsyncSession, u
                 cfg.subjects[user.id] = [await s.subject_detail(i.link) for i in await s.latest_marks()] 
             except DataMissingException:
                 return await inline_query.answer(results=[], is_personal=True,cache_time=5, switch_pm_text='Оценки в профиле не найдены, проверь на сайте и попробуй ещё раз позже', switch_pm_parameter='abc')
-        subj = [i for i in cfg.subjects[user.id] if i.link == link_base+subj]
+        subj = next((i for i in cfg.subjects[user.id] if i.name.lower() in inline_query.query.lower()), None)
         if not subj: return await inline_query.answer(results=[], is_personal=True,cache_time=5, switch_pm_text='Предмет не найден', switch_pm_parameter='abc')
-        subj = subj[0]
         
         await inline_query.answer(results=[types.InlineQueryResultArticle(
             id=str(random.randint(0,10000000)),title=f'{i.date}{", "+mark(i.mark, user.marks_row, True, False) if i.mark else ""}{", Н" if i.is_absent else ""}{", ⚠️"+i.type + " "  if i.type else ""}',  # + "⬜️"*20

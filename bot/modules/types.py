@@ -375,7 +375,7 @@ def mark(m, marks_row='🟢,🟣,🟠,🔴,🚷', add_mark=False, compress=True,
 def get_thumb(mark, are_absent):
     '''Получить иконку оценки'''
     # TODO - перенести в локальный аплоад
-    match mark, are_absent:
+    match mark[:1], are_absent:
         case '2', False: return 'https://i.imgur.com/a3u0JJl.png'
         case '2', True: return 'https://i.imgur.com/qxSw0pc.png'
         case '3', False: return 'https://i.imgur.com/pmrmKN3.png'

@@ -236,8 +236,8 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                     except Exception as e:
                         await send_error_message(bot, e, 'Error updating marks for '+user.get_nick())
                 
-                # trigger every hour
-                if loop_counter>=59:
+                # trigger every 30 min (400 users takes 30 min to proceed)
+                if loop_counter>=30:
                     loop_counter = 0
                     logger.info(f'Start marks parsing')
                     async with aiohttp.ClientSession(NSU_ENDPOINT, headers=header_generator(country='ru')) as aiohttp_session:

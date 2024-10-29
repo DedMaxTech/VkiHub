@@ -222,7 +222,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                                             if flag:
                                                 try:
                                                     await bot.send_message(user.id, f'Новая оценка для {new_subj.name} за {nm.date}{f"({nm.type})" if nm.type else ""}: {mark(nm.mark, user.marks_row, True, False)} {"Н" if nm.is_absent else ""}\n{f"Тема: {nm.theme}" if nm.theme else ""}',
-                                                                            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Все оценки по '+new_subj.name, switch_inline_query_current_chat='!s'+base64.b64encode(new_subj.link.replace(link_base,'').encode()).decode())]]))
+                                                                            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text='Все оценки по '+new_subj.name, switch_inline_query_current_chat='!s '+new_subj.name)]]))
                                                 except aiogram.exceptions.TelegramForbiddenError: pass
                                                 except Exception as e:
                                                     await send_error_message(bot, e, 'error on sending mark')
@@ -241,7 +241,9 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                     loop_counter = 0
                     logger.info(f'Start marks parsing')
                     async with aiohttp.ClientSession(NSU_ENDPOINT, headers=header_generator(country='ru')) as aiohttp_session:
-                        await asyncio.gather(*[check_user(user, aiohttp_session) for user in users if user.login])
+                        # await asyncio.gather(*[check_user(user, aiohttp_session) for user in users if user.login])
+                        for user in users:
+                            if user.login: await check_user(user, aiohttp_session)
                     logger.info(f'End marks parsing')
                 else: loop_counter += 1
                     

@@ -57,7 +57,7 @@ async def inline_marks(inline_query: types.InlineQuery, session: AsyncSession, u
                 cfg.subjects[user.id] = [await s.subject_detail(i.link) for i in await s.latest_marks()] 
             except DataMissingException:
                 return await inline_query.answer(results=[], is_personal=True,cache_time=5, switch_pm_text='Оценки в профиле не найдены, проверь на сайте и попробуй ещё раз позже', switch_pm_parameter='abc')
-        subj = next((i for i in cfg.subjects[user.id] if i.name.lower() in inline_query.query.lower()), None)
+        subj = next((i for i in cfg.subjects[user.id] if i.name == inline_query.query.replace('!s', '').strip()), None)
         if not subj: return await inline_query.answer(results=[], is_personal=True,cache_time=5, switch_pm_text='Предмет не найден', switch_pm_parameter='abc')
         
         await inline_query.answer(results=[types.InlineQueryResultArticle(

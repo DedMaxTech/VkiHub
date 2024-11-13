@@ -122,13 +122,14 @@ base_abbreviation = {
     "преподаватель":"",
     "семинар": "🚌",
     "лекция дистанционно": "🛏",
-    "дистанц..лекция": "🛏",
+    "дист.. лекция": "🛏",
     "дистанционно": "🛏",
     "лекция": "📖",
     "произ..пр..": "🛠",
     "практ..занят..": "🛠",
     "Уч..Пр..": "🛠",
     "КП.": "🛠",
+    "Читальный зал": "Чит. зал",
     r"\bлаб..": "🔬",
     "  ": " ",
 }
@@ -149,7 +150,7 @@ default_abbreviation = {
     r"ПМ(\.\d\d){1,2}\.?\s?": "",
     "Системное программирование":"Сист. прогр.",
     "Разработка веб-ПРИЛОЖЕНИЙ": "Веб",
-    "Технология разработки прогр..обеспеч..": "ТРПО",
+    "Технология разработки п..о..": "ТРПО",
     "Инструментальные средства разработки ПО": "ИСРПО",
     "Инструментальные средства разработки программного обеспечения": "ИСРПО",
     "Техническое документоведение в профессиональной деятельности": "Документоведение",
@@ -178,7 +179,6 @@ default_abbreviation = {
     "Сопровождение и обслуживание П..О.. к..с..": "Обслуживание ПО",
     "Разработка, администрирование и защита БД": "Разработка БД",
     "Технология разработки и защиты б..д..": "Разработка БД",
-    
     "Микропроцессорные системы": "Микропроцессоры",
     "Проектирование цифровых устройств": "Цифровые устройства",
     "Настройка программного обеспечения сетевых устройств": "Сетевые устройства",
@@ -223,6 +223,9 @@ class Lesson:
             if hide_my_group:
                 if self.other_cogroups and 'дистанц' not in self.content.lower(): t+=f' (+ {await group_groups(self.other_cogroups, bot)})'
             else: t += (' ' if hide_teacher else '| ') + await group_groups(self.co_groups, bot)   
+            
+            if not (hide_my_group or hide_teacher):
+                t = t.replace(self.classroom, '')
         
         
         if self.classroom: t = t.replace(self.classroom, html.underline(html.link(self.classroom, await create_start_link(bot, 't:'+self.classroom, True)) if bot else self.classroom))
@@ -282,7 +285,9 @@ class Diff:
         if self.type == DiffType.REPLACED: return f"{self.type.value}: {await self.old.print(bot, user, hide_teacher, hide_my_group)}\nна {await self.new.print(bot, user, hide_teacher, hide_my_group)}"
         if self.type == DiffType.MOVED: 
             s = f"{self.type.value}: {await self.old.print(bot, user, hide_teacher, hide_my_group)}"
-            if self.old.weekday.weekday != self.new_day.weekday or self.old.number !=self.new.number: s += f"\nна {html.underline(weekdays[self.new_day.weekday])} {self.new_day.date} {self.new.text_number} парой"
+            if self.old.number !=self.new.number: 
+                if self.old.weekday.weekday != self.new_day.weekday: s += f"\nна {html.underline(weekdays[self.new_day.weekday])} {self.new_day.date} {self.new.text_number} парой"
+                else: s += f"\nна {self.new.text_number} пару"
             if self.old.classroom != self.new.classroom: s += f"\nв кабинет {self.new.classroom}"
             return s
     

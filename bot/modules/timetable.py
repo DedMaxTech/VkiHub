@@ -89,10 +89,13 @@ def parse_schedule_from_pdf(timetable:Timetable):
                         nt = nt[:-3] + nt[-2:]
                     cont = cont.replace(teacher, nt)
                     teacher = nt
+        
                 classroom = re.findall(r'\b\d{3}[a-zа-яё]?\b',cont)
                 classroom=classroom[0] if classroom else ''
-                if not classroom and 'Читальный зал' in cont: classroom = 'Читальный зал'
-                if not classroom and 'Актовый зал' in cont: classroom = 'Актовый зал'
+                for s in 'Читальный зал', 'Актовый зал', 'Физкультура', 'Физическая культура':
+                    if s in cont: 
+                        classroom = s
+                    
                 schedule.setdefault(data[0][j], {})
                 schedule[data[0][j]].setdefault(row[0], WeekDay(weekday=weekdays.index(row[0].title()),date=week_dates.get(row[0], ''),lessons=[]))
                 schedule[data[0][j]][row[0]].lessons.append(

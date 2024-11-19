@@ -190,7 +190,6 @@ def find_timetable_diff(new: dict[str, list['WeekDay']], old: dict[str, list['We
                     if not ol: diffs.append(Diff(None, l))
                     elif l.canceled and not ol.canceled: diffs.append(Diff(l, None))
                     elif l.content != ol.content: 
-                        # diffs.append(Diff(ol, l))
                         diffs.append(Diff(None, l))
                         diffs.append(Diff(ol, None))
 
@@ -202,26 +201,35 @@ def find_timetable_diff(new: dict[str, list['WeekDay']], old: dict[str, list['We
             if diffs: diff[wd] = diffs
         
         
+        # поиск переносов
         for wd in diff:
             for df in diff[wd]:
                 if df.type != DiffType.NEW: continue
                 for j_wd in diff:
                     for d in diff[j_wd]:
                         if d.type != DiffType.CANCELED: continue
-                        if df.new.content.replace(df.new.classroom, '') == d.old.content.replace(d.old.classroom, ''):
+                        if df.new.minimal == d.old.minimal:
                             df.old = d.old
-                            df.new_day = j_wd
                             diff[j_wd].remove(d)
 
+        # поиск замен
         for wd in diff:
             for df in diff[wd]:
                 if df.type != DiffType.NEW: continue
                 for d in diff[wd]:
                     if d.type != DiffType.CANCELED: continue
-                    if d!=df and d.type == DiffType.CANCELED and df.new.number == d.old.number and df.new.content != d.old.content:
+                    if d!=df and df.new.number == d.old.number and df.new.content != d.old.content:
                         df.old = d.old
                         diff[wd].remove(d)
+            for df in diff[wd]: # удаление двойных отмен
+                if df.type != DiffType.NEW or not df.new.canceled: continue
+                for d in diff[wd]:
+                    if d.type != DiffType.CANCELED: continue
+                    if d!=df and df.new.content == d.new.content:
+                        d.old = df.new
+                        diff[wd].remove(df)
             wd.diffs = list(sorted(diff[wd], key=lambda x: (x.old or x.new).number))
+        
             
             
 shorter_table = {

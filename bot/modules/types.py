@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 import datetime
 import re
 from aiogram import html
+from aiogram import types, Bot
 from aiogram.utils.deep_linking import create_start_link
 import enum
 from db.models import User
@@ -245,8 +246,16 @@ class Lesson:
         else: return self.number
     
     @property
+    def minimal(self):
+        return self.content.replace(self.classroom, '').replace(self.teacher, '')
+    
+    @property
     def other_cogroups(self): # todo refactor
         return [gr for gr in self.co_groups if gr[:-1 if 'дистанц' not in self.content.lower() else -2] != self.group[:-1 if 'дистанц' not in self.content.lower() else -2]]
+    
+    @staticmethod
+    async def link(text: str, bot: Bot):
+        return html.link(text, await create_start_link(bot, 't:'+text, True))
 
 weekdays = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
 async def group_groups(groups: list[str],bot=None):
@@ -277,7 +286,6 @@ class DiffType(enum.Enum):
 class Diff:
     old: Lesson = None
     new: Lesson = None
-    new_day: 'WeekDay' = None
     
     async def print(self, bot, user: User=None, hide_teacher = False, hide_my_group = True):
         if self.type == DiffType.CANCELED: return f"{self.type.value}: {await self.old.print(bot, user, hide_teacher, hide_my_group)}"
@@ -285,19 +293,23 @@ class Diff:
         if self.type == DiffType.REPLACED: return f"{self.type.value}: {await self.old.print(bot, user, hide_teacher, hide_my_group)}\nна {await self.new.print(bot, user, hide_teacher, hide_my_group)}"
         if self.type == DiffType.MOVED: 
             s = f"{self.type.value}: {await self.old.print(bot, user, hide_teacher, hide_my_group)}"
-            if self.old.number !=self.new.number: 
-                if self.old.weekday.weekday != self.new_day.weekday: s += f"\nна {html.underline(weekdays[self.new_day.weekday])} {self.new_day.date} {self.new.text_number} парой"
-                else: s += f"\nна {self.new.text_number} пару"
-            if self.old.classroom != self.new.classroom: s += f"\nв кабинет {self.new.classroom}"
+            if self.old.number !=self.new.number or self.old.weekday.weekday != self.new.weekday.weekday: 
+                if self.old.weekday.weekday == self.new.weekday.weekday: s += f"\nна {self.new.text_number} пару"
+                else: s += f"\nна {html.underline(weekdays[self.new.weekday.weekday])} {self.new.weekday.date} {self.new.text_number} парой"
+            if self.old.classroom != self.new.classroom: s += f"\nв кабинет {Lesson.link(self.new.classroom, bot)}"
+            if self.old.teacher != self.new.teacher: s += f"\nк {Lesson.link(self.new.teacher, bot)}"
             return s
     
     @property
     def type(self) -> DiffType:
-        match (self.old, self.new, self.new_day):
-            case (_,None, None): return DiffType.CANCELED
-            case (None,_, None): return DiffType.NEW
-            case (_,_, None): return DiffType.REPLACED
-            case (_,_,_): return DiffType.MOVED
+        if not self.new: return DiffType.CANCELED
+        if not self.old: return DiffType.NEW
+        if self.new.weekday == self.old.weekday: return DiffType.REPLACED
+        return DiffType.MOVED
+    
+    @staticmethod
+    async def link(text: str, bot: Bot):
+        return html.link(text, await create_start_link(bot, 'd:'+text, True))
     
     @staticmethod
     def changes(num:int):

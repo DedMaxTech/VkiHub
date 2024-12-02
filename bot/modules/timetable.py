@@ -47,7 +47,7 @@ def parse_schedule_from_pdf(timetable:Timetable):
                 for j in range(0,len(data)):
                     data[j].pop(i)
                     # data[j] = data[j][:i] + data[j][i+1:]
-        
+
         try:
             data[1][1] = data[1][1].split()[-1]
         except IndexError: raise ConvertingError(f'IndexError in data[1][1]')
@@ -92,7 +92,7 @@ def parse_schedule_from_pdf(timetable:Timetable):
         
                 classroom = re.findall(r'\b\d{3}[a-zа-яё]?\b',cont)
                 classroom=classroom[0] if classroom else ''
-                for s in 'Читальный зал', 'Актовый зал', 'Физкультура', 'Физическая культура':
+                for s in 'Читальный зал', 'Актовый зал', 'Физкультура', 'Физическая культура':
                     if s in cont: 
                         classroom = s
                     
@@ -106,6 +106,7 @@ def parse_schedule_from_pdf(timetable:Timetable):
                         teacher=teacher,
                         classroom=classroom,
                         co_groups=[data[0][x] for x in range(2, len(row)) if row[j]==row[x]], # and  j!=x and data[0][j][:-1]!=data[0][x][:-1] (не считать подгруппы)
+                        conflict_groups=[],
                         canceled='отмена' in row[j].lower(), 
                         raw=row[j],
                         half_lesson_detected='.5' in row[1] or '.5' in data[min(i+1, len(data)-1)][1],
@@ -139,6 +140,9 @@ def find_cogroups_in_timetables(timetables:list[Timetable]):
                                     if l.content and l.number == l2.number and l.content == l2.content and l2.group not in l.co_groups:
                                         l.co_groups.append(l2.group)
                                         l2.co_groups.append(l.group)
+                                    if l.content and l.number == l2.number and l.classroom == l2.classroom and l2.group not in l.co_groups and l2.group not in l.conflict_groups:
+                                        l.conflict_groups.append(l2.group)
+                                        l2.conflict_groups.append(l.group)
 
 def by_teacher(lesson: Lesson): return lesson.teacher
 def by_classroom(lesson: Lesson): return lesson.classroom
@@ -163,7 +167,7 @@ def group_timetable_by(timetables:list[Timetable], f:Callable[[Lesson], str]):
             t = {float(i.number) for i in wd.lessons}
             for i in range(1,int(max(t))):
                 if i not in t:
-                    wd.lessons.append(Lesson('',str(i), '', '', '', [], '', None))
+                    wd.lessons.append(Lesson('',str(i), '', '', '', [],[], '', None))
             wd.lessons.sort(key=lambda x: x.number)
             r2.setdefault(pr, []).append(wd)  
     return r2

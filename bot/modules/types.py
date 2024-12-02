@@ -205,6 +205,8 @@ class Lesson:
     '''Спарсеная аудитория'''
     co_groups: list[str]
     '''Группы, у который стоит точно такая же пара'''
+    conflict_groups: list[str]
+    '''Группы, у который пара в этом же кабинете'''
     raw: str
     '''Оригинальный контент ячейки (по приколу)'''
     weekday: 'WeekDay'
@@ -227,6 +229,8 @@ class Lesson:
             
             if not (hide_my_group or hide_teacher):
                 t = t.replace(self.classroom, '')
+            # elif self.conflict_groups and self.classroom and 'дистанц' not in self.content.lower(): # TODO better conflict display
+            #     t += f' (⚠️ {await group_groups(self.conflict_groups, bot)})'
         
         
         if self.classroom: t = t.replace(self.classroom, html.underline(html.link(self.classroom, await create_start_link(bot, 't:'+self.classroom, True)) if bot else self.classroom))

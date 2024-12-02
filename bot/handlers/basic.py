@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from fuzzywuzzy import process, fuzz
+import emoji
 
 from db.models import User
 from messages.basic import *
@@ -282,12 +283,15 @@ async def set_marks(msg: types.Message, session: AsyncSession, user:User,state: 
     splited = msg.text.split(',')
     if len(splited) != 5:
         return await msg.answer('Введи ровно 5 эмодзи, по 1 на каждую оценку')
-    if (any([len(i)>3 for i in splited])):
+    if len(msg.text) > 32:
         return await msg.answer('Слишком длинные эмодзи, попробуй другие\nЕсли ты всё на самом деле написал всё корректно но бот выдал ошибку, напиши мне')
+    for i in splited:
+        if not emoji.is_emoji(i):
+            return await msg.answer(f'"{i}" - не эмодзи, попробуй другие\nЕсли ты всё на самом деле написал всё корректно но бот выдал ошибку, напиши мне')
     await state.update_data(marks=msg.text)
     await msg.answer("К сожелению, на каждом устройстве отступы отображаются по разному, так что ты можешь настроить их под себя\n\nЛибо устнови отступы (отличаются от устройства к устройству), либо отправь эмодзи заполнитель (всегда выглядит одинакого)\n\nНастрой так, чтобы все предметы были на одном уровне",
                      reply_markup=indents_kb)
-    await msg.answer("Выбери и я покажу как это будет выглядеть", reply_markup=build_marks_kb(example_data, msg.text+",     "))
+    await msg.answer("Выбери и я покажу как это будет выглядеть", reply_markup=build_marks_kb(example_data, msg.text+",➖"))
     await state.set_state(ProfileStates.set_indent)
 
 @router.message(ProfileStates.set_indent, F.text)

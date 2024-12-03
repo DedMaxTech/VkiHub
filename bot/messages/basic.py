@@ -118,8 +118,13 @@ rings_tt = """Расписание звонков: <code>
 RM_CANCEL = '❌Отменить'
 
 RM_M_OK = '✅Мне всё нравится'
+RM_M_NO_INDENT = '❌Без отступов'
 RM_M_LEFT = '⏪Уменьшить отступ'
 RM_M_RIGHT = 'Увеличить отступ⏩'
+RM_M_NO_MARKS = '❌Без оценок'
+RM_M_ALL_MARKS = '*️⃣Все оценки'
+RM_M_COUNT_LEFT = '⬅️Меньше оценок'
+RM_M_COUNT_RIGHT = 'Больше оценок➡️'
 RM_M_ANDROID = '📱Для андроида'
 RM_M_IPHONE = '☎️Для айфона'
 RM_M_PC = '🖥Для ПК'
@@ -132,7 +137,13 @@ RM_NOT_LINK = 'Не связывать (не рекомендуется)'
 RM_ABBR_SHORT = 'Основные, без сокращений предметов'
 RM_ABBR_FULL = 'По умолчанию (основное и предметы)'
 
-indents_kb = Rkb([[RM_M_OK,RM_CANCEL], [RM_M_LEFT, RM_M_RIGHT], [RM_M_ANDROID, RM_M_IPHONE,RM_M_PC], ['⚫️', '⬛',  '➖', '⏹']], "Эмодзи...", False)
+indents_kb = Rkb([[RM_M_OK,RM_CANCEL], 
+                  [RM_M_COUNT_LEFT, RM_M_COUNT_RIGHT],
+                  [RM_M_ALL_MARKS, RM_M_NO_MARKS], 
+                #   [RM_M_NO_INDENT], 
+                  [RM_M_ANDROID, RM_M_IPHONE,RM_M_PC], 
+                  [RM_M_LEFT, RM_M_RIGHT], 
+                  ['⚫', '⬛',  '➖', '⏹']], "Эмодзи заполнитель", False)
 
 CD_SET_GROUP = 'set_group'
 CD_CLEAR_GROUP = 'unset_group'
@@ -176,16 +187,17 @@ def build_timetable_markup(user: User, add_buttons: list[str] = None):
 
 link_base = '/vkistudent/journal/detail/'
 
-def build_marks_kb(marks: list[Subject],  marks_row, add_buttons: list[list[InlineKeyboardButton]] = []):
+def build_marks_kb(subjects: list[Subject],  marks_row, marks_count=5,add_buttons: list[list[InlineKeyboardButton]] = []):
+    max_length = min(marks_count, max([len(i.marks) for i in subjects]))
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text = ''.join([(mark(mk.mark, marks_row, format='{v},') or marks_row.split(',')[-2])
                             if mk else fill
-                            for mk, fill in zip_longest(i.marks[-5:], [marks_row.split(',')[-1]]*5)])\
+                            for mk, fill in zip_longest(i.marks[-marks_count:] if marks_count else [], [marks_row.split(',')[-1]]*max_length, fillvalue=None)],)\
                     +i.name + "‎  "*30+'.' , 
             switch_inline_query_current_chat='!s '+i.name,
         )]
-        for i in marks
+        for i in subjects
     ]+add_buttons)
     
 

@@ -275,7 +275,7 @@ async def cb_customize_marks(cb: types.CallbackQuery,session: AsyncSession,state
                             reply_markup=Rkb([['🟢,🟣,🟠,🔴,🚷','🟩,🟪,🟧,🟥,♿'], ['😍,😊,😭,🙊,🙈', '5️⃣,4️⃣,3️⃣,2️⃣,⚠️'], [RM_CANCEL]], "5,4,3,2,Н"))
     await state.set_state(ProfileStates.set_marks)
 
-example_data = [Subject("Очень важный предмет", [Mark("","",False,i, "") for i in "5432Н"], "1"),
+example_data = [Subject("Очень важный предмет", [Mark("","",False,i, "") for i in "5432Н5432Н5432Н"], "1"),
                 Subject("Очень важный предмет 2", [Mark("","",False,"5", "")], "1"),
                 Subject("Очень важный предмет 3", [Mark("","",False,i, "") for i in "25Н"], "1"),]
 @router.message(ProfileStates.set_marks, F.text)
@@ -297,10 +297,12 @@ async def set_marks(msg: types.Message, session: AsyncSession, user:User,state: 
 @router.message(ProfileStates.set_indent, F.text)
 async def set_indent(msg: types.Message, session: AsyncSession, user:User,state: FSMContext):
     data = await state.get_data()
-    cur_indent = data.get('indent', 5)
+    cur_indent = data.get('indent', '➖')
+    marks_count = data.get('marks_count', 5)
     
     if msg.text == RM_M_OK:
         user.marks_row = data['marks']+','+(" "*cur_indent if isinstance(cur_indent, int) else cur_indent)
+        user.marks_count = marks_count
         await session.commit()
         await state.clear()
         await msg.answer('Установлено \n'+user.repr_mark_row, reply_markup=build_timetable_markup(user))
@@ -312,16 +314,27 @@ async def set_indent(msg: types.Message, session: AsyncSession, user:User,state:
     elif msg.text == RM_M_RIGHT:
         cur_indent = cur_indent+1 if isinstance(cur_indent, int) else 6
         if cur_indent > 11: return await msg.answer("Нельзя сделать больше")
+    elif msg.text == RM_M_NO_INDENT: cur_indent = 0
+    elif msg.text == RM_M_COUNT_LEFT:
+        marks_count = marks_count-1
+        if marks_count < 0: return await msg.answer("Нельзя сделать меньше")
+    elif msg.text == RM_M_COUNT_RIGHT:
+        marks_count = marks_count+1
+        if marks_count > 20: return await msg.answer("Не ну это перебор...")
+    elif msg.text == RM_M_NO_MARKS: marks_count = 0
+    elif msg.text == RM_M_ALL_MARKS: marks_count = 20
     elif msg.text == RM_M_ANDROID: cur_indent = 5
     elif msg.text == RM_M_IPHONE: 
         cur_indent = 6
         await msg.answer("Note: на айфоне отступы работают плохо, лучше используй эмодзи заполнитель, к примеру ➖")
     elif msg.text == RM_M_PC: cur_indent = 7
-    elif len(msg.text) > 3: return await msg.answer("Я тебя не понял, пришли эмодзи для заполнителя или выбери вариант из предложенных", reply_markup=indents_kb)
-    else: cur_indent = msg.text
-
-    await state.update_data(indent=cur_indent)
+    elif emoji.is_emoji(msg.text): cur_indent = msg.text 
+    else: return await msg.answer("Я тебя не понял, пришли эмодзи для заполнителя или выбери вариант из предложенных", reply_markup=indents_kb)
     
-    await msg.answer("Так нормально?", reply_markup=build_marks_kb(example_data, data['marks']+","+(" "*cur_indent if isinstance(cur_indent, int) else cur_indent)))
+    
+    await state.update_data(indent=cur_indent)
+    await state.update_data(marks_count=marks_count)
+    
+    await msg.answer("Так нормально?", reply_markup=build_marks_kb(example_data, data['marks']+","+(" "*cur_indent if isinstance(cur_indent, int) else cur_indent), marks_count))
     
     

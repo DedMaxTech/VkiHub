@@ -194,7 +194,7 @@ def build_marks_kb(subjects: list[Subject],  marks_row, marks_count=5,add_button
             text = ''.join([(mark(mk.mark, marks_row, format='{v},') or marks_row.split(',')[-2])
                             if mk else fill
                             for mk, fill in zip_longest(i.marks[-marks_count:] if marks_count else [], [marks_row.split(',')[-1]]*max_length, fillvalue=None)],)\
-                    +i.name + "‎  "*30+'.' , 
+                    +i.name + "‎  \t  "*30+'.' , 
             switch_inline_query_current_chat='!s '+i.name,
         )]
         for i in subjects

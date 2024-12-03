@@ -32,7 +32,7 @@ async def cmd_marksv2(msg: types.Message, session: AsyncSession, user:User, stud
         await msg.answer()
         msg = msg.message
 
-    await msg.answer(f'Последние {str(user.marks_count) + "оценок" if user.marks_count >= 12 or not user.marks_count else "оценок"}\n{user.repr_mark_row}\nСтарые➡️Новые',
+    await msg.answer(f'Последние {str(user.marks_count) + " оценок" if user.marks_count < 12 and user.marks_count else "оценки"}\n{user.repr_mark_row}\nСтарые➡️Новые',
                     reply_markup=build_marks_kb(cfg.subjects[user.id], user.marks_row, user.marks_count, add_buttons=[[InlineKeyboardButton(text='🪄Настроить отображение оценок', callback_data=CD_CURTOMIZE_MARKS)]]))
 
 

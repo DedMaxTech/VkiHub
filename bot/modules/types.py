@@ -225,8 +225,8 @@ class Diff:
             if self.old.number !=self.new.number or self.old.weekday.weekday != self.new.weekday.weekday: 
                 if self.old.weekday.weekday == self.new.weekday.weekday: s += f"\nна {self.new.text_number} пару"
                 else: s += f"\nна {html.underline(weekdays[self.new.weekday.weekday])} {self.new.weekday.date} {self.new.text_number} парой"
-            if self.old.classroom != self.new.classroom: s += f"\nв кабинет {Lesson.link(self.new.classroom, bot)}"
-            if self.old.teacher != self.new.teacher: s += f"\nк {Lesson.link(self.new.teacher, bot)}"
+            if self.old.classroom != self.new.classroom: s += f"\nв кабинет {await Lesson.link(self.new.classroom, bot)}"
+            if self.old.teacher != self.new.teacher: s += f"\nк {await Lesson.link(self.new.teacher, bot)}"
             return s
     
     @property

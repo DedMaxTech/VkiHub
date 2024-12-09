@@ -1,4 +1,5 @@
 import asyncio
+import difflib
 import io
 import os
 import re, datetime
@@ -172,6 +173,8 @@ def group_timetable_by(timetables:list[Timetable], f:Callable[[Lesson], str]):
             r2.setdefault(pr, []).append(wd)  
     return r2
 
+
+
 def find_timetable_diff(new: dict[str, list['WeekDay']], old: dict[str, list['WeekDay']] = None):
     if old is None: return
     
@@ -212,8 +215,9 @@ def find_timetable_diff(new: dict[str, list['WeekDay']], old: dict[str, list['We
                 for j_wd in diff:
                     for d in diff[j_wd]:
                         if d.type != DiffType.CANCELED: continue
-                        if df.new.minimal == d.old.minimal:
+                        if df.new.minimal == d.old.minimal or find_string_diff(d.old.minimal, df.new.minimal):
                             df.old = d.old
+                            df.moved = True
                             diff[j_wd].remove(d)
 
         # поиск замен

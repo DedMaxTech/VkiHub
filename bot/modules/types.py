@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 import datetime
+import difflib
 from functools import lru_cache
 import re
 from aiogram import html
@@ -202,7 +203,22 @@ async def group_groups(groups: list[str],bot=None):
         res += ', '
     return res[:-2]
 
-
+def find_string_diff(old_text, new_text, max_length=10):
+    f = lambda x: f'"{x}"' if len(x) < 2 else x
+    diffs = []
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, old_text, new_text).get_opcodes():
+        if tag != 'equal':
+            old_sub = old_text[i1:i2]
+            new_sub = new_text[j1:j2]
+            if len(old_sub) > max_length or len(new_sub) > max_length: return
+            diffs.append((old_sub, new_sub, tag,i1, i2, j1, j2))
+    
+    if len(diffs) == 1:
+        old_sub, new_sub, tag,i1, i2, j1, j2 = diffs[0]
+        # old_text = old_text[:i1] + f'({f(old_sub)} → {f(new_sub)})' + old_text[i2:]
+        # for 
+            # old_text = old_text.replace(old_sub, f'({old_sub or quotes} → {new_sub or quotes})')
+        return f'{f(old_sub)} → {f(new_sub)}' 
 
 class DiffType(enum.Enum):
     CANCELED = '🔴Отмена'
@@ -215,25 +231,33 @@ class DiffType(enum.Enum):
 class Diff:
     old: Lesson = None
     new: Lesson = None
+    moved: bool = False
     
     async def print(self, bot, user: User=None, hide_teacher = False, hide_my_group = True):
         if self.type == DiffType.CANCELED: return f"{self.type.value}: {await self.old.print(bot, user, hide_teacher, hide_my_group)}"
         if self.type == DiffType.NEW: return f"{self.type.value}: {await self.new.print(bot, user, hide_teacher, hide_my_group)}"
-        if self.type == DiffType.REPLACED: return f"{self.type.value}: {await self.old.print(bot, user, hide_teacher, hide_my_group)}\nна {await self.new.print(bot, user, hide_teacher, hide_my_group)}"
+        if self.type == DiffType.REPLACED: 
+            # diff find here
+            return f"{self.type.value}: {await self.old.print(bot, user, hide_teacher, hide_my_group)}\nна {await self.new.print(bot, user, hide_teacher, hide_my_group)}"
         if self.type == DiffType.MOVED: 
             s = f"{self.type.value}: {await self.old.print(bot, user, hide_teacher, hide_my_group)}"
-            if self.old.number !=self.new.number or self.old.weekday.weekday != self.new.weekday.weekday: 
-                if self.old.weekday.weekday == self.new.weekday.weekday: s += f"\nна {self.new.text_number} пару"
-                else: s += f"\nна {html.underline(weekdays[self.new.weekday.weekday])} {self.new.weekday.date} {self.new.text_number} парой"
+            # if self.old.number !=self.new.number or self.old.weekday.weekday != self.new.weekday.weekday: 
+            #     if self.old.weekday.weekday == self.new.weekday.weekday: s += f"\nна {self.new.text_number} пару"
+            #     else: s += f"\nна {html.underline(weekdays[self.new.weekday.weekday])} {self.new.weekday.date} {self.new.text_number} парой"
+            if self.old.weekday.weekday != self.new.weekday.weekday: 
+                s += f"\nна {html.underline(weekdays[self.new.weekday.weekday])} {self.new.weekday.date} {self.new.text_number} парой"
+            else:
+                if self.old.number !=self.new.number: s += f"\nна {self.new.text_number} пару"
             if self.old.classroom != self.new.classroom: s += f"\nв кабинет {await Lesson.link(self.new.classroom, bot)}"
             if self.old.teacher != self.new.teacher: s += f"\nк {await Lesson.link(self.new.teacher, bot)}"
+            if d:=find_string_diff(self.old.minimal, self.new.minimal): s += f"\nизменено: {d}"
             return s
     
     @property
     def type(self) -> DiffType:
         if not self.new: return DiffType.CANCELED
         if not self.old: return DiffType.NEW
-        if self.new.weekday == self.old.weekday: return DiffType.REPLACED
+        if not self.moved: return DiffType.REPLACED
         return DiffType.MOVED
     
     @staticmethod

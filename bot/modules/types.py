@@ -294,7 +294,7 @@ class WeekDay:
                 elif index == len(cur_num_lessons)-1: s+='┗'
                 else: s+='┣'
             s += await i.print(bot, user, hide_teacher, hide_my_group) + '\n'
-        if not self.lessons: s+='Пары не найдены'
+        if not self.lessons: s+='Пары не найдены\n'
         return s
 
     async def print_diffs(self, bot=None, user: User=None, hide_teacher = False, hide_my_group = True):

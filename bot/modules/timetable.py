@@ -233,7 +233,7 @@ def find_timetable_diff(new: dict[str, list['WeekDay']], old: dict[str, list['We
                 if df.type != DiffType.NEW or not df.new.canceled: continue
                 for d in diff[wd]:
                     if d.type != DiffType.CANCELED: continue
-                    if d!=df and df.new.content == d.new.content:
+                    if d!=df and df.new.content == d.old.content:
                         d.old = df.new
                         diff[wd].remove(df)
             wd.diffs = list(sorted(diff[wd], key=lambda x: (x.old or x.new).number))

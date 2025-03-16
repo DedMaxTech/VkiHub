@@ -29,7 +29,7 @@ def parse_schedule_from_pdf(timetable:Timetable):
     # я уже не помню как тут всё работает.....
     tm = time.perf_counter()
     # !! часто нужно калибровать числовые параметры (тестовым путём), тк меняют толщину и расположение линий в расписании
-    tables = camelot.read_pdf(str(cfg.base_dir/'temp/pdf_files'/(timetable.name+'.pdf')), pages='all',copy_text=['h', 'v'],  line_scale=53, joint_tol=12, line_tol=12   , backend=ConversionBackend())
+    tables = camelot.read_pdf(str(cfg.base_dir/'temp/pdf_files'/(timetable.name+'.pdf')), pages='all',copy_text=['h', 'v'],  line_scale=55, joint_tol=12, line_tol=12   , backend=ConversionBackend())
     schedule:dict[str, dict[str, WeekDay]] = {}
     for table in tables:
         data: list[list[str]] = table.df.values.tolist()
@@ -49,9 +49,10 @@ def parse_schedule_from_pdf(timetable:Timetable):
                     data[j].pop(i)
                     # data[j] = data[j][:i] + data[j][i+1:]
 
-        try:
-            data[1][1] = data[1][1].split()[-1]
-        except IndexError: raise ConvertingError(f'IndexError in data[1][1]')
+        # try:
+        #     data[1][1] = data[1][1].split()[-1]
+        # except IndexError: 
+        #     raise ConvertingError(f'IndexError in data[1][1]')
         week_dates = {} # ищем и удаляем даты с раписания
         last_day = None # для фикса ситуации когда у ряда нет дня недели/цифры пары
         last_number = 0 # для фикса при отсутсвии номеров пар
@@ -76,7 +77,8 @@ def parse_schedule_from_pdf(timetable:Timetable):
         # тут уже тупо распихиваем готовую инфу и форматируем текст
         for i in range(1, len(data)):
             row = data[i]
-            if '\n' in row[1]: raise ConvertingError('Некорректный номер пары')
+            if '\n' in row[1]: 
+                raise ConvertingError('Некорректный номер пары')
             for j in range(2, len(row)):
                 if row[1].endswith('.5') and data[i][j] == data[i-1][j]: continue
                 cont = delete_spaces(row[j].replace('\n', ' ')).replace('..', '.').strip(' .\n\t')

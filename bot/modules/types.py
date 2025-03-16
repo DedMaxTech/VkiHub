@@ -157,7 +157,7 @@ class Lesson:
         if self.classroom: t = t.replace(self.classroom, html.underline(html.link(self.classroom, await create_start_link(bot, 't:'+self.classroom, True)) if bot else self.classroom))
         if self.canceled: t = html.strikethrough(t)
         if t[-1]=='.': t = t[:-1]
-        if self.half_lesson_detected: t+=f'\n⚠️Полупара, перепроверьте расписание на {self.number.split(".")[0]} пару. {html.link("Почему так?", "https://github.com/DedMaxTech/VkiHub/issues/2")}'
+        # if self.half_lesson_detected: t+=html.link("\n⚠️Полупара", "https://github.com/DedMaxTech/VkiHub/issues/2")
         if user:
             for k, v in (default_abbreviation if user.abbrevioations is None else user.abbrevioations).items():
                 pattern = k.replace('..', r'\w*\.?\s*')
@@ -294,6 +294,8 @@ class WeekDay:
                 elif index == len(cur_num_lessons)-1: s+='┗'
                 else: s+='┣'
             s += await i.print(bot, user, hide_teacher, hide_my_group) + '\n'
+            if i in cur_num_lessons and cur_num_lessons.index(i) == len(cur_num_lessons)-1 and any(x.half_lesson_detected for x in cur_num_lessons): 
+                s += html.link("⚠️Полупара\n", "https://github.com/DedMaxTech/VkiHub/issues/2")
         if not self.lessons: s+='Пары не найдены\n'
         return s
 

@@ -145,7 +145,7 @@ class Lesson:
             else: t = t.replace(self.teacher, html.link(self.teacher, await create_start_link(bot, 't:'+self.teacher, True)) if bot else self.teacher)
             
             if hide_my_group:
-                if self.other_cogroups and not self.is_distant: t+=f' (+ {await group_groups(self.other_cogroups, bot)})'
+                if self.other_cogroups and not self.is_distant and len(self.other_cogroups)<8: t+=f' (+ {await group_groups(self.other_cogroups, bot)})'
             else: t += (' ' if hide_teacher else '| ') + await group_groups(self.co_groups, bot)   
             
             if not (hide_my_group or hide_teacher):

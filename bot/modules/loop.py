@@ -159,7 +159,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                                     # changes = {gr: changes[gr] for gr in changes if changes[gr]}
                                     changes = {gr: sum([len(wd.diffs) for wd in ntt.groups[gr]]) for gr in ntt.groups}
                                     changes = {gr: changes[gr] for gr in changes if changes[gr]}
-                                    await send_timetable(user, f'Новое расписание для {ntt.as_str}\n\n(β)' + ('Изменения не найдены'
+                                    await send_timetable(user, f'Новое расписание для {ntt.print}\n\n(β)' + ('Изменения не найдены'
                                         if not changes else f'Найдены изменения для {",".join(f"{k}: {v}шт" for k, v in changes.items())}' + '\n\nЧтобы бот показывал детально показывал что куда перенесли, поставь в профиле расписание по конкретной группе'), ntt)
                                 else: # отдельная группа
                                     await send_timetable(user, f'(β) Новое расписание для {user.timetable}\n\n'+'\n'.join([await wd.print(bot, user, hide_teacher=False, hide_my_group=True) for wd in ntt.groups[user.timetable]]), ntt)
@@ -200,7 +200,7 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                         try:
                             old = cfg.subjects.get(user.id) or []
                             # visit latest_marks page only if no links cached already
-                            try:
+                            try: # TODO: попробовать использовать gather
                                 new = [await student.subject_detail(i.link) for i in (old or await student.latest_marks())]
                             except DataMissingException: return
                             except ForbidenException:

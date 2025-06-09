@@ -1,8 +1,7 @@
-from aiogram import F, Bot, Dispatcher, types, flags
+from aiogram import F, Bot, Dispatcher, types
 from aiogram.client.default import DefaultBotProperties
 
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy import select
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 import logging, asyncio
 from logging.handlers import RotatingFileHandler
@@ -46,8 +45,6 @@ dp.update.middleware(NotificationMiddleware())
 dp.message.middleware(StudentMiddleware())
 dp.callback_query.middleware(StudentMiddleware())
 
-
-##### Dont create handlers in this file, use /handlers dir, for example /handlers/basic.py
 
 async def main():
     dp.include_router(admin.router)

@@ -25,6 +25,9 @@ class Timetable:
     '''Запарсеное расписание по группам'''
     text_content:str = ''
     '''Депрекейтед, использовалось как аналог хэша для сравнения изменений'''
+    notes: str = ''
+    '''Доп инфа по расписанию, обычно о ошибках парсинга'''
+    
     
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Timetable): return self.name == other.name
@@ -145,7 +148,7 @@ class Lesson:
             else: t = t.replace(self.teacher, html.link(self.teacher, await create_start_link(bot, 't:'+self.teacher, True)) if bot else self.teacher)
             
             if hide_my_group:
-                if self.other_cogroups and not self.is_distant and len(self.other_cogroups)<8: t+=f' (+ {await group_groups(self.other_cogroups, bot)})'
+                if self.other_cogroups and not self.is_distant and len(self.other_cogroups)<6: t+=f' (+ {await group_groups(self.other_cogroups, bot)})'
             else: t += (' ' if hide_teacher else '| ') + await group_groups(self.co_groups, bot)   
             
             if not (hide_my_group or hide_teacher):

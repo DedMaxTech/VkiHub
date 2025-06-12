@@ -3,6 +3,7 @@ import random
 from typing import AsyncGenerator, Coroutine
 from aiogram import Router, html, flags
 import aiogram
+import aiogram.exceptions
 from aiogram.filters import Command
 from aiogram import types , flags, F
 from aiogram.fsm.context import FSMContext
@@ -73,6 +74,7 @@ async def inline_marks(inline_query: types.InlineQuery, session: AsyncSession, u
         return await inline_marks(inline_query, session, user)
     except LoginFailedException:
         return await inline_query.answer(results=[], is_personal=True,cache_time=5, switch_pm_text='Не удалось войти в аккаунт НГУ', switch_pm_parameter='abc')
+    except aiogram.exceptions.TelegramBadRequest: pass
 
 @router.inline_query(F.query =='Мои приказы')
 async def inline_marks(inline_query: types.InlineQuery, session: AsyncSession, user:User):

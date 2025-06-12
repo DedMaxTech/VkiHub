@@ -12,6 +12,7 @@ CD_COMMAND_PROMPT = 'cmd'
 CD_UPDATE = 'update'
 CD_LOGS = 'logs'
 CD_BAN = 'ban'
+CD_SHELL = 'shell'
 
 RM_CANCEL = '❌Cancel'
 RM_CONFIRM = '✅Confirm'
@@ -28,6 +29,7 @@ class AdminStates(StatesGroup):
     write_pm_delay=State()
     write_pm=State()
     command=State()
+    shell=State()
     ban_time=State()
     ban_select=State()
     ban_reason=State()
@@ -47,9 +49,10 @@ DISK: {disk.percent}%  {disk.used/1024/1024/1024:.1f}Gb/{disk.total/1024/1024:.1
            InlineKeyboardButton(text='✉️Write PM', callback_data=CD_WRITE_PM))
     kb.row(InlineKeyboardButton(text='🔄Reload', callback_data=CD_RELOAD_BOT),
            InlineKeyboardButton(text='📥Update', callback_data=CD_UPDATE))
-    kb.row(InlineKeyboardButton(text='🛠Command', callback_data=CD_COMMAND_PROMPT),
+    kb.row(InlineKeyboardButton(text='🛠Eval', callback_data=CD_COMMAND_PROMPT),
            InlineKeyboardButton(text='🗒Logs', callback_data=CD_LOGS))
     kb.row(InlineKeyboardButton(text='🚫Ban', callback_data=CD_BAN),
-           InlineKeyboardButton(text='👥List users', switch_inline_query_current_chat='!user'))
+           InlineKeyboardButton(text='⌨️Shell', callback_data=CD_SHELL))
+    kb.row(InlineKeyboardButton(text='👥List users', switch_inline_query_current_chat='!user'))
     return m, kb.as_markup()
 

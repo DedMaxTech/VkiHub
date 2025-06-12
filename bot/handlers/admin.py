@@ -152,6 +152,26 @@ async def command(msg: types.Message, session: AsyncSession, state: FSMContext):
     logger.warning(f'Command executed, = {msg.text}, result={res}')
     await msg.answer(html.code(html.quote(str(res))),parse_mode='HTML')
     await state.clear()
+    
+################ Shell ####################
+@router.callback_query(F.data==CD_SHELL)
+async def command_cb(cb: types.CallbackQuery,state: FSMContext):
+    if cfg.allow_eval==0: return await cb.answer('Eval not allowed in config file',show_alert=True)
+    if cfg.allow_eval==1 and cb.from_user.id != cfg.superuser: return await cb.answer('Only allowed to superuser',show_alert=True)
+    await state.set_state(AdminStates.shell)
+    await cb.message.answer('Enter terminal commands\nYOU MUST KNOW WHAT YOU ARE DOING')
+    await cb.answer()
+
+@router.message(AdminStates.shell, F.text)
+async def command(msg: types.Message, session: AsyncSession, state: FSMContext):
+    try: 
+        result = subprocess.run(msg.text, shell=True, capture_output=True, text=True)
+        res = f'Return code:{result.returncode}\n{"Error" if result.stderr else "Output"}: {html.code(html.quote(result.stdout or result.stderr))}'
+    except Exception as e: res = traceback.format_exc()
+    
+    logger.warning(f'Command executed, = {msg.text}, result={res}')
+    await msg.answer(res,parse_mode='HTML')
+    await state.clear()
 
 ################ Reload ####################
 @router.callback_query(F.data==CD_RELOAD_BOT)

@@ -53,7 +53,7 @@ base_abbreviation = {
     "произ..пр..": "🛠",
     "практ..занят..": "🛠",
     "Уч..Пр..": "🛠",
-    "КП.": "🛠",
+    r"КП\.": "🛠",
     "Читальный зал": "Чит. зал",
     r"\bлаб..": "🔬",
     "  ": " ",
@@ -145,7 +145,7 @@ class Lesson:
         
         if self.content:
             if hide_teacher: t = t.replace(self.teacher, '')
-            else: t = t.replace(self.teacher, html.link(self.teacher, await create_start_link(bot, 't:'+self.teacher, True)) if bot else self.teacher)
+            else: t = t.replace(self.teacher, html.link(self.teacher, await create_start_link(bot, 't:'+self.teacher, True)) if bot and self.teacher else self.teacher)
             
             if hide_my_group:
                 if self.other_cogroups and not self.is_distant and len(self.other_cogroups)<6: t+=f' (+ {await group_groups(self.other_cogroups, bot)})'

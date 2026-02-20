@@ -16,3 +16,4 @@ git+https://github.com/camelot-dev/camelot.git
 opencv-python
 transliterate
 emoji
+aiohttp_socks

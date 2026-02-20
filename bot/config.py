@@ -13,6 +13,7 @@ class Settings():
     allow_eval = int(os.getenv('BOT_ALLOW_EVAL') or '0')
     temp_group = int(os.getenv('TEMP_GROUP') or os.getenv('BOT_SUPERUSER'))
     encyption_key = os.getenv('ENCRYPTION_KEY').encode()
+    proxy_url = os.getenv('PROXY_URL')
     
     
     # globals

@@ -1,5 +1,6 @@
 from aiogram import F, Bot, Dispatcher, types
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
@@ -32,21 +33,26 @@ logging.getLogger('camelot').setLevel(logging.WARNING)
 engine = create_async_engine(url=cfg.db_url)
 sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
 
-# Aiogram
-bot = Bot(token=cfg.bot_token,  default=DefaultBotProperties(parse_mode="HTML", link_preview_is_disabled=True))
-dp = Dispatcher()
-
-# Order is important
-dp.update.middleware(DbSessionMiddleware(session_pool=sessionmaker))
-dp.update.middleware(AuthMiddleware())
-dp.update.middleware(LoggingMiddleware(logger=logger))
-dp.update.middleware(BanMiddleware())
-dp.update.middleware(NotificationMiddleware())
-dp.message.middleware(StudentMiddleware())
-dp.callback_query.middleware(StudentMiddleware())
-
 
 async def main():
+    # Aiogram
+    bot_session = None
+    if cfg.proxy_url:
+        bot_session = AiohttpSession(proxy=cfg.proxy_url)
+
+    bot = Bot(token=cfg.bot_token, session=bot_session, default=DefaultBotProperties(parse_mode="HTML", link_preview_is_disabled=True))
+    dp = Dispatcher()
+
+    # Order is important
+    dp.update.middleware(DbSessionMiddleware(session_pool=sessionmaker))
+    dp.update.middleware(AuthMiddleware())
+    dp.update.middleware(LoggingMiddleware(logger=logger))
+    dp.update.middleware(BanMiddleware())
+    dp.update.middleware(NotificationMiddleware())
+    dp.message.middleware(StudentMiddleware())
+    dp.callback_query.middleware(StudentMiddleware())
+    
+    
     dp.include_router(admin.router)
     dp.include_router(basic.router)
     dp.include_router(marks.router)

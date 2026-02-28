@@ -81,6 +81,7 @@ def parse_schedule_from_pdf(timetable:Timetable):
         # тут уже тупо распихиваем готовую инфу и форматируем текст
         for i in range(1, len(data)):
             row = data[i]
+            # if 'пара' in row[1]: row[1] = row[1].split()[0]
             if '\n' in row[1]: 
                 raise ConvertingError('Некорректный номер пары')
             for j in range(2, len(row)):
@@ -281,7 +282,9 @@ async def get_all_timetables()-> list[Timetable]:
             for i in items:
                 link = unquote(i.get('href').replace('\n','').strip())
                 if 'Основное' in link: continue
-                date = re.findall(r'\d\d.\d\d.\d\d', link)[-1] or ''
+                date = re.findall(r'\d\d.\d\d.\d\d', link)
+                if not date: continue
+                else: date = date[-1] or ''
                 tt = Timetable(
                     name=delete_spaces(reduce(lambda x,y: x.replace(y, shorter_table[y]), shorter_table, link.split('/')[-1].replace(date,''))).strip(),
                     # name=link.split('/')[-1].translate(shorter_table).replace(date,'').strip(),

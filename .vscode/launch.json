@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "Start bot",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "bot/bot.py",
             "console": "integratedTerminal",

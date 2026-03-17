@@ -3,6 +3,7 @@ import datetime
 import difflib
 from functools import lru_cache
 import re
+from typing import Any
 from aiogram import html
 from aiogram import types, Bot
 from aiogram.utils.deep_linking import create_start_link
@@ -39,6 +40,99 @@ class Timetable:
     
     def __str__(self) -> str:
         return f"<Timetable {self.name} for {self.date}>"
+
+
+@dataclass(frozen=True)
+class ApiTimeSlot:
+    id: int | None
+    begin: str
+    end: str
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'ApiTimeSlot':
+        return cls(
+            id=data.get('id'),
+            begin=data.get('begin') or '',
+            end=data.get('end') or '',
+        )
+
+
+@dataclass(frozen=True)
+class ApiLessonInfo:
+    id: int | None
+    name: str
+    type: int | None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'ApiLessonInfo':
+        return cls(
+            id=data.get('id'),
+            name=data.get('name') or '',
+            type=data.get('type'),
+        )
+
+
+@dataclass(frozen=True)
+class ApiNamedEntity:
+    id: int | None
+    name: str
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> 'ApiNamedEntity | None':
+        if not data:
+            return None
+        return cls(
+            id=data.get('id'),
+            name=data.get('name') or '',
+        )
+
+
+@dataclass(frozen=True)
+class ApiSchoolClass:
+    id: int | None
+    name: str
+    parallel: int | None
+    subgroup: str | None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'ApiSchoolClass':
+        return cls(
+            id=data.get('id'),
+            name=data.get('name') or '',
+            parallel=data.get('parallel'),
+            subgroup=data.get('subgroup'),
+        )
+
+
+@dataclass(frozen=True)
+class ApiScheduleEntry:
+    id: int | None
+    weekday: int
+    time: ApiTimeSlot
+    lesson: ApiLessonInfo
+    classroom: ApiNamedEntity | None
+    teacher: ApiNamedEntity | None
+    school_classes: list[ApiSchoolClass]
+    parity: int | None
+    show_for_current_week: bool
+    parity_label: str | None
+    parity_type: str | int | None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> 'ApiScheduleEntry':
+        return cls(
+            id=data.get('id'),
+            weekday=data.get('weekday') or 0,
+            time=ApiTimeSlot.from_dict(data.get('time') or {}),
+            lesson=ApiLessonInfo.from_dict(data.get('lesson') or {}),
+            classroom=ApiNamedEntity.from_dict(data.get('classroom')),
+            teacher=ApiNamedEntity.from_dict(data.get('teacher')),
+            school_classes=[ApiSchoolClass.from_dict(i) for i in (data.get('schoolClasses') or [])],
+            parity=data.get('parity'),
+            show_for_current_week=bool(data.get('show_for_current_week', True)),
+            parity_label=data.get('parity_label'),
+            parity_type=data.get('parity_type'),
+        )
 
 
 base_abbreviation = {
@@ -170,9 +264,12 @@ class Lesson:
     
     @property
     def text_number(self): #замена цифры на эмодзи
-        if self.number[0].isdigit():
-            return f'{"1️⃣,2️⃣,3️⃣,4️⃣,5️⃣".split(",")[int(self.number[0])-1]}{self.number[1:]}'
-        else: return self.number
+        if self.number and self.number[0].isdigit():
+            number_emoji = "1️⃣,2️⃣,3️⃣,4️⃣,5️⃣".split(",")
+            index = int(self.number[0]) - 1
+            if 0 <= index < len(number_emoji):
+                return f'{number_emoji[index]}{self.number[1:]}'
+        return self.number
     
     @property
     def minimal(self):

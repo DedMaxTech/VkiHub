@@ -13,6 +13,7 @@ from fuzzywuzzy import process, fuzz
 from db.models import User
 from messages.basic import *
 from config import cfg
+from modules.timetable import normalize_group_name
 
 
 router = Router()
@@ -30,24 +31,22 @@ async def profile_callback(cb: types.CallbackQuery):
 
 async def timetable_diff_handler(msg: types.Message, user: User, session: AsyncSession):
     q = decode_payload(msg.text.split(' ', 1)[1])[2:] if msg.text.startswith('/start ') else msg.text
+    q = q.replace('⭐️', '').replace('🕓','')
+    group_q = q if q in cfg.groups else normalize_group_name(q)
     
-    wds = None
-    for tt in cfg.timetables:
-        if tt.groups.get(q):
-            wds = tt.groups[q]
-            break
-    else: wds = cfg.teachers.get(q)
+    wds = cfg.groups.get(group_q) or cfg.teachers.get(q)
+    target = q if q in cfg.teachers else group_q
     
     if wds is None: return await msg.answer('Расписание (и изменения) не найдены')
     if cfg.last_timetable_update is None: return await msg.answer('Изменения не найдены')
-    if sum(len(wd.diffs) for wd in wds) == 0: return await msg.answer(f'Изменения для {html.link(q, await create_start_link(msg.bot, "t:"+q, True))} по сравнению с расписанием от {cfg.last_timetable_update.strftime("%d.%m.%Y")} не найдены', reply_markup=build_timetable_markup(user))
-    await msg.answer(f'Изменения для {html.link(q, await create_start_link(msg.bot, "t:"+q, True))} по сравнению с расписанием от {cfg.last_timetable_update.strftime("%d.%m.%Y")}:\n\n'+'\n─────────────────\n\n'.join([await wd.print_diffs(msg.bot, user, q in cfg.teachers, q not in cfg.teachers) for wd in wds if wd.diffs]), reply_markup=build_timetable_markup(user))
+    if sum(len(wd.diffs) for wd in wds) == 0: return await msg.answer(f'Изменения для {html.link(target, await create_start_link(msg.bot, "t:"+target, True))} по сравнению с расписанием от {cfg.last_timetable_update.strftime("%d.%m.%Y")} не найдены', reply_markup=build_timetable_markup(user))
+    await msg.answer(f'Изменения для {html.link(target, await create_start_link(msg.bot, "t:"+target, True))} по сравнению с расписанием от {cfg.last_timetable_update.strftime("%d.%m.%Y")}:\n\n'+'\n─────────────────\n\n'.join([await wd.print_diffs(msg.bot, user, q in cfg.teachers, q not in cfg.teachers) for wd in wds if wd.diffs]), reply_markup=build_timetable_markup(user))
     
     
 @router.message(F.text)
 async def timetable_handler(msg: types.Message, user: User, session: AsyncSession):
     q = decode_payload(msg.text.split(' ', 1)[1])[2:] if msg.text.startswith('/start ') else msg.text
-    if len(cfg.timetables) == 0: 
+    if len(cfg.timetables) == 0 and not cfg.groups: 
         return await msg.answer('Расписания не найдены', reply_markup=build_timetable_markup(user))
     q = q.replace('⭐️', '').replace('🕓','')
     if q in cfg.timetables:
@@ -62,15 +61,11 @@ async def timetable_handler(msg: types.Message, user: User, session: AsyncSessio
     if q in cfg.classrooms:
         await msg.answer(f"(β) Расписание для кабинета {html.link(q, await create_start_link(msg.bot, 't:'+q, True))}\n\n"+'\n'.join([await wd.print(msg.bot, user,hide_teacher=False, hide_my_group=False) for wd in cfg.classrooms[q]]), reply_markup=build_timetable_markup(user))
         return
-    if q[0].isdigit():
-        gr = None
-        for tt in cfg.timetables:
-            for grp in tt.groups:
-                if q in grp:
-                    gr = tt.groups[grp]
-                    break
-            if gr: break
-        if gr:
+    if q and (q[0].isdigit() or (q[0] in 'Вв' and len(q) > 1 and q[1].isdigit())):
+        normalized_q = normalize_group_name(q)
+        grp = next((group for group in cfg.groups if group.startswith(normalized_q)), None)
+        if grp:
+            gr = cfg.groups[grp]
             if grp != user.timetable:
                 user.last_timetable = grp
                 await session.commit()
@@ -81,7 +76,9 @@ async def timetable_handler(msg: types.Message, user: User, session: AsyncSessio
                 if changes > 0: s += html.bold(f'\nНайдено {html.link(f"{changes} {Diff.changes(changes)}", await create_start_link(msg.bot, "d:"+grp, True))} по сравнению с {cfg.last_timetable_update.strftime("%d.%m.%Y")}')
                 else: s+= f"\nИзменения не найдены по сравнению с {cfg.last_timetable_update.strftime('%d.%m.%Y')}"
             await msg.answer(s, reply_markup=build_timetable_markup(user))
-            await msg.answer_media_group([types.InputMediaDocument(media=i) for i in tt.images])
+            mapped_tt = next((i for i in cfg.timetables if grp in i.groups), None)
+            if mapped_tt and mapped_tt.images:
+                await msg.answer_media_group([types.InputMediaDocument(media=i) for i in mapped_tt.images])
             # if any(wd.diffs for wd in gr): TODO
             #     await msg.answer('(β) Изменения в расписании:\n'+'\n'.join([await wd.print_diffs(msg.bot) for wd in gr if wd.diffs]))
             return
@@ -91,16 +88,13 @@ async def timetable_handler(msg: types.Message, user: User, session: AsyncSessio
             if teacher != user.timetable:
                 user.last_timetable = teacher
                 await session.commit()
-            empty_tts = [i for i in cfg.timetables if not i.groups]
             
-            s = f"(β) Расписание для {html.link(next((c.name for c in cfg.contacts if teacher.split(' ')[0] in c.name and ' '+teacher.split(' ')[-1][0] in c.name and ' '+teacher[-2] in c.name), teacher), await create_start_link(msg.bot, 't:'+teacher, True))}\n\n"+'\n'.join([await wd.print(msg.bot, user, hide_teacher=True, hide_my_group=False) for wd in cfg.teachers[teacher]]) + (f'\n\n❗️Note: временно невозможно получить данные из {",".join([i.name for i in empty_tts])}. Пожалуйста, перепроверьте что у {teacher} нет пар в файлах ниже' if empty_tts else '')
+            s = f"(β) Расписание для {html.link(next((c.name for c in cfg.contacts if teacher.split(' ')[0] in c.name and ' '+teacher.split(' ')[-1][0] in c.name and ' '+teacher[-2] in c.name), teacher), await create_start_link(msg.bot, 't:'+teacher, True))}\n\n"+'\n'.join([await wd.print(msg.bot, user, hide_teacher=True, hide_my_group=False) for wd in cfg.teachers[teacher]])
             if cfg.last_timetable_update:
                 changes = sum(len(wd.diffs) for wd in cfg.teachers[teacher])
                 if changes > 0: s += html.bold(f'\nНайдено {html.link(f"{changes} {Diff.changes(changes)}", await create_start_link(msg.bot, "d:"+teacher, True))} по сравнению с {cfg.last_timetable_update.strftime("%d.%m.%Y")}')
                 else: s+= f"\nИзменения не найдены по сравнению с {cfg.last_timetable_update.strftime('%d.%m.%Y')}"
             await msg.answer(s, reply_markup=build_timetable_markup(user))
-            for i in empty_tts:
-                await msg.answer_media_group([types.InputMediaDocument(media=i) for i in i.images]) 
             return 
 
     await msg.answer(f'Такое расписание не найдено, выбери вариант ниже, или напиши свою группу или преподователя', reply_markup=build_timetable_markup(user))

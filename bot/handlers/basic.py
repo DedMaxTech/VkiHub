@@ -16,6 +16,7 @@ from db.models import User
 from messages.basic import *
 from config import cfg
 from modules.nsu_cab import *
+from modules.timetable import normalize_group_name
 from handlers.timetable import timetable_handler, timetable_diff_handler
 
 router = Router()
@@ -96,10 +97,11 @@ async def update(cb: types.CallbackQuery, user:User, state: FSMContext):
 @router.message(ProfileStates.set_group, F.text)
 async def newchat(msg: types.Message, session: AsyncSession, user:User,state: FSMContext):
     q = msg.text.replace('⭐️', '').replace('🕓','')
+    normalized_q = normalize_group_name(q)
     tt = None
     if q in cfg.timetables: tt = q
-    elif q[0].isdigit() and (gr := next((gr for i in cfg.timetables for gr in i.groups if gr.startswith(q)), None)): tt = gr
-    elif (t:= next((t for t in cfg.teachers if q.lower() in t.lower()), None)): tt = t
+    elif q and (q[0].isdigit() or (q[0] in 'Вв' and len(q) > 1 and q[1].isdigit())) and (gr := next((gr for gr in cfg.groups if gr.startswith(normalized_q)), None)): tt = gr
+    elif q and (t:= next((t for t in cfg.teachers if q.lower() in t.lower()), None)): tt = t
     if not tt:
         return await msg.answer('Не найдено, выбери снизу или напишу свою группу', reply_markup=build_timetable_markup(user, [RM_CANCEL]))
     

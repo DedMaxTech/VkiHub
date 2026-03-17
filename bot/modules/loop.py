@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import logging
 import time
 import aiogram
@@ -22,24 +23,16 @@ from modules.nsu_cab import *
 logger = logging.getLogger('bot')
 
 async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
-    loop = asyncio.get_running_loop()
     try: # init everything
         try:
             cfg.timetables = await get_all_timetables() #get timetables pdfs
             await pdfs_to_image(bot, cfg.timetables) # cache photos
-            m = await bot.send_message(cfg.superuser, f'Timetables loaded, {len(cfg.timetables)} found')
-            
-            for tt in cfg.timetables: # parse all timetables
-                try:
-                    await loop.run_in_executor(None, parse_schedule_from_pdf, tt)
-                    m = await m.edit_text(m.text+f'\nParsed {tt.name}: {", ".join(tt.groups.keys())}')
-                # except ConvertingError as e:
-                #     await bot.send_message(cfg.superuser, f'Failed to parse {tt.name}, {e}')
-                except Exception as e:
-                    await send_error_message(bot, e, f'Failed to parse {tt.name}, skipped')
-            find_cogroups_in_timetables(cfg.timetables)
-            
-            # aud = group_timetable_by(cfg.timetables, by_classroom)
+            cfg.groups, cfg.schedule_hash = await load_schedule_from_api(cfg.timetables)
+            await bot.send_message(
+                cfg.superuser,
+                f'Timetables loaded: {len(cfg.timetables)} pdf, {len(cfg.groups)} groups from API',
+            )
+
             cfg.teachers = group_timetable_by(cfg.timetables, by_teacher) # convert for teachers
             cfg.classrooms = group_timetable_by(cfg.timetables, by_classroom)
             
@@ -81,22 +74,28 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
             
                 tm = time.time()
                 
-                # get latest timetables
-                try: new_timetables = await get_all_timetables()
-                except asyncio.exceptions.TimeoutError: pass
+                # get latest timetables + latest API schedule
+                try:
+                    new_timetables = await get_all_timetables()
+                    new_groups, new_schedule_hash = await load_schedule_from_api(new_timetables)
+                except asyncio.exceptions.TimeoutError:
+                    continue
                 except TooManyRedirects:
                     logger.warning(f'Failed to update timetables, to many redirects')
+                    continue
                 
                 
-                is_changed = False
+                is_changed = new_schedule_hash != cfg.schedule_hash
 
                 # small helper to send messages
-                async def send_timetable(user:User, text: str, timetable:Timetable):
-                    if timetable.images == []:
-                        await pdfs_to_image(bot, [timetable])
+                async def send_timetable(user:User, text: str, timetable:Timetable|None = None):
                     try:
                         await bot.send_message(user.id,text)
-                        await bot.send_media_group(user.id, [types.InputMediaDocument(media=i) for i in timetable.images])
+                        if timetable:
+                            if timetable.images == []:
+                                await pdfs_to_image(bot, [timetable])
+                            if timetable.images:
+                                await bot.send_media_group(user.id, [types.InputMediaDocument(media=i) for i in timetable.images])
                     except exceptions.TelegramForbiddenError: pass
                     except Exception as e:
                         await send_error_message(bot, e, 'error on sending timetable for '+user.get_nick())
@@ -112,72 +111,49 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                 if is_changed:
                     await pdfs_to_image(bot, [tt for tt in new_timetables if not tt.images]) # cache
                     
-                    for tt in new_timetables: # parse
-                        try:
-                            await loop.run_in_executor(None, parse_schedule_from_pdf, tt)
-                        # except ConvertingError as e:
-                        #     await bot.send_message(cfg.superuser, f'Failed to parse {tt.name}, {e}') 
-                        except Exception as e:
-                            await send_error_message(bot, e, f'Failed to parse {tt.name}, skipped')   
-                    find_cogroups_in_timetables(new_timetables)
-                    
-                    # Testing
-                    # new_timetables[-1].groups['107в2'][0].lessons[1].number = '4'
-                    # new_timetables[-1].groups['107в2'][0].lessons[1].content = new_timetables[-1].groups['107в2'][0].lessons[1].content.replace('235', '666')
-                    # new_timetables[-1].groups['107в2'][0].lessons[1].classroom = '666'
-                    # new_timetables[-1].groups['107в2'][0].lessons[0] = Lesson('','2','','','',[],'',None)
-                    # new_timetables[-1].groups['107в2'][1].lessons.append(Lesson('новая пара','1','11111','2222','3333',[],'',None))
-                    # new_timetables[-1].groups['107в2'][2].lessons[2] = Lesson('муравьи сосите','3','','','',[],'',None)
-                    # new_timetables[-1].groups['107в2'][1].lessons[3].canceled = True
-                    # l = new_timetables[-1].groups['107в2'][2].lessons.pop(0)
-                    # l.number = '5'
-                    # new_timetables[-1].groups['107в2'][1].lessons.append(l)
-                    # new_timetables[-1].groups['107в2'][2].lessons[0].content= new_timetables[-1].groups['107в2'][2].lessons[0].content.replace('414', '101')
-                    # new_timetables[-1].groups['107в2'][2].lessons[0].classroom = '101'
-                    
                     new_teachers = group_timetable_by(new_timetables, by_teacher) 
                     new_classrooms = group_timetable_by(new_timetables, by_classroom)
                     
-                    
-                    
-                    for tt in new_timetables:
-                        ott = next((i for i in cfg.timetables if i.name == tt.name), None)
-                        find_timetable_diff(tt.groups, ott.groups if ott else None)
+                    find_timetable_diff(new_groups, cfg.groups)
                     find_timetable_diff(new_teachers, cfg.teachers)
                     
                     # send to all users
                     for user in users:
                         try:
                             if not user.timetable: continue
-                            if user.timetable in cfg.teachers: # TODO changes
-                                await bot.send_message(user.id, f'(β) Вышло расписание для {user.timetable}\n\n' +'\n'.join([await wd.print(bot,user, hide_teacher=True, hide_my_group=False) for wd in cfg.teachers[user.timetable]]))
+                            if user.timetable in new_teachers:
+                                await bot.send_message(user.id, f'(β) Вышло расписание для {user.timetable}\n\n' +'\n'.join([await wd.print(bot,user, hide_teacher=True, hide_my_group=False) for wd in new_teachers[user.timetable]]))
                                 continue
-                            ntt = next((i for i in new_timetables if i.name == user.timetable or user.timetable in i.groups), None)
-                            if ntt:
-                                if user.timetable == ntt.name: # общая pdf ка
-                                    # changes = {gr: sum([len(diff[gr][wd]) for wd in diff[gr]]) for gr in diff if gr in ntt.groups}
-                                    # changes = {gr: changes[gr] for gr in changes if changes[gr]}
-                                    changes = {gr: sum([len(wd.diffs) for wd in ntt.groups[gr]]) for gr in ntt.groups}
-                                    changes = {gr: changes[gr] for gr in changes if changes[gr]}
-                                    await send_timetable(user, f'Новое расписание для {ntt.as_str}\n\n(β)' + ('Изменения не найдены'
-                                        if not changes else f'Найдены изменения для {",".join(f"{k}: {v}шт" for k, v in changes.items())}' + '\n\nЧтобы бот показывал детально показывал что куда перенесли, поставь в профиле расписание по конкретной группе'), ntt)
-                                else: # отдельная группа
-                                    await send_timetable(user, f'(β) Новое расписание для {user.timetable}\n\n'+'\n'.join([await wd.print(bot, user, hide_teacher=False, hide_my_group=True) for wd in ntt.groups[user.timetable]]), ntt)
-                                    changes_count = sum([len(wd.diffs) for wd in ntt.groups[user.timetable]])
-                                    if not changes_count: 
-                                        await bot.send_message(user.id, '(β) Изменения не найдены')
-                                    elif changes_count > 20:
-                                        await bot.send_message(user.id, f'(β) {changes_count} изменений, расписания слишком сильно отличается')
-                                    else:
-                                        s = '(β) Найдены изменения:\n'
-                                        # for wd in ntt.groups[user.timetable]:
-                                        #     s+=await wd.print_diffs(bot)+'\n'
-                                        s += '\n─────────────────\n\n'.join([await wd.print_diffs(bot, user, hide_teacher=False, hide_my_group=True) for wd in ntt.groups[user.timetable] if wd.diffs])
-                                        await bot.send_message(user.id, s)
+
+                            ntt = next((i for i in new_timetables if i.name == user.timetable), None)
+                            if ntt: # общая pdf ка
+                                changes = {gr: sum([len(wd.diffs) for wd in ntt.groups[gr]]) for gr in ntt.groups}
+                                changes = {gr: changes[gr] for gr in changes if changes[gr]}
+                                await send_timetable(user, f'Новое расписание для {ntt.as_str}\n\n(β)' + ('Изменения не найдены'
+                                    if not changes else f'Найдены изменения для {",".join(f"{k}: {v}шт" for k, v in changes.items())}' + '\n\nЧтобы бот показывал детально показывал что куда перенесли, поставь в профиле расписание по конкретной группе'), ntt)
+                                continue
+
+                            group = user.timetable if user.timetable in new_groups else normalize_group_name(user.timetable)
+                            if group not in new_groups:
+                                continue
+
+                            grouped_timetable = next((tt for tt in new_timetables if group in tt.groups), None)
+                            await send_timetable(user, f'(β) Новое расписание для {group}\n\n'+'\n'.join([await wd.print(bot, user, hide_teacher=False, hide_my_group=True) for wd in new_groups[group]]), grouped_timetable)
+                            changes_count = sum([len(wd.diffs) for wd in new_groups[group]])
+                            if not changes_count: 
+                                await bot.send_message(user.id, '(β) Изменения не найдены')
+                            elif changes_count > 20:
+                                await bot.send_message(user.id, f'(β) {changes_count} изменений, расписания слишком сильно отличается')
+                            else:
+                                s = '(β) Найдены изменения:\n'
+                                s += '\n─────────────────\n\n'.join([await wd.print_diffs(bot, user, hide_teacher=False, hide_my_group=True) for wd in new_groups[group] if wd.diffs])
+                                await bot.send_message(user.id, s)
                         except aiogram.exceptions.TelegramForbiddenError: continue
                     
-                    cfg.last_timetable_update = cfg.timetables[0].date
+                    cfg.last_timetable_update = datetime.datetime.now()
                     cfg.timetables = new_timetables
+                    cfg.groups = new_groups
+                    cfg.schedule_hash = new_schedule_hash
                     cfg.teachers = new_teachers
                     cfg.classrooms = new_classrooms
                 

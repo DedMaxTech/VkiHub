@@ -19,6 +19,10 @@ class Settings():
     # globals
     timetables: list[Timetable] = []
     '''all timetables from ci.nsu.ru, with parsed data'''
+    groups: dict[str, list['WeekDay']] = {}
+    '''group schedule built from API'''
+    schedule_hash: str | None = None
+    '''hash of latest API response for change detection'''
     contacts: list[Contact] = []
     '''contact from google directory'''
     subjects: dict[int, list[Subject]] = {}

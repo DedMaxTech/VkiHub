@@ -1,8 +1,8 @@
-import asyncio
-import difflib
-import io
+import datetime
+import hashlib
+import json
 import os
-import re, datetime
+import re
 import time
 import aiofiles
 import aiohttp
@@ -12,7 +12,8 @@ import pymupdf
 from aiogram import types
 from googleapiclient.discovery import build
 from urllib.parse import unquote
-import camelot,  re
+import camelot
+from functools import reduce
 from typing import Callable
 
 from utils import *
@@ -134,6 +135,203 @@ def parse_schedule_from_pdf(timetable:Timetable):
     
     logger.debug(f'Parsing time for {timetable.name}: {time.perf_counter()-tm:.2f}')
     timetable.groups = {gr: list(wd.values()) for gr, wd in schedule.items()}
+
+SCHEDULE_API_URL = 'https://table-ci.nsu.ru/api/schedule/find'
+_LESSON_TYPE_LABELS = {
+    1: 'лекция',
+    2: 'лабораторная',
+    3: 'практическое занятие',
+}
+
+
+def normalize_group_name(name: str) -> str:
+    group = delete_spaces((name or '').strip()).replace(' ', '').lower().translate(en_to_ru)
+    if group.startswith('в') and len(group) > 1 and group[1].isdigit():
+        group = group[1:]
+    return group
+
+
+def _normalize_text_for_group_search(text: str) -> str:
+    normalized = (text or '').lower().translate(en_to_ru)
+    normalized = normalized.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').replace('\xa0', ' ')
+    normalized = delete_spaces(normalized)
+    return normalized.replace(' ', '')
+
+
+def _is_group_in_timetable_text(group: str, normalized_timetable_text: str) -> bool:
+    variants = (group, 'в' + group)
+    return any(variant in normalized_timetable_text for variant in variants)
+
+
+def _time_to_minutes(value: str) -> int:
+    try:
+        h, m = value.split(':', 1)
+        return int(h) * 60 + int(m)
+    except Exception:
+        return 10**9
+
+
+def _lesson_sort_key(lesson: Lesson) -> tuple[float, str]:
+    try:
+        return float(lesson.number), lesson.number
+    except Exception:
+        return 10**6, lesson.number
+
+
+def _build_lesson_number_map(entries: list[ApiScheduleEntry]) -> dict[str, str]:
+    times = sorted({i.time.begin for i in entries if i.time.begin}, key=_time_to_minutes)
+    return {value: str(index + 1) for index, value in enumerate(times)}
+
+
+def _build_lesson_content(
+    entry: ApiScheduleEntry,
+    lesson_type: str,
+    classroom: str,
+    teacher: str,
+) -> str:
+    parts = [delete_spaces(entry.lesson.name).strip()]
+    if lesson_type:
+        parts.append(lesson_type)
+    if entry.parity_label:
+        parts.append(delete_spaces(entry.parity_label).strip())
+    if classroom:
+        parts.append(classroom)
+    if teacher:
+        parts.append(teacher)
+    return delete_spaces(' '.join(i for i in parts if i)).strip()
+
+
+def parse_schedule_from_api(entries: list[ApiScheduleEntry]) -> dict[str, list[WeekDay]]:
+    schedule: dict[str, dict[int, WeekDay]] = {}
+    lesson_numbers = _build_lesson_number_map(entries)
+
+    for entry in entries:
+        if entry.weekday < 1 or entry.weekday > len(weekdays):
+            continue
+
+        weekday = entry.weekday - 1
+        teacher = delete_spaces((entry.teacher.name if entry.teacher else '')).strip()
+        classroom = delete_spaces((entry.classroom.name if entry.classroom else '')).strip()
+        lesson_type = _LESSON_TYPE_LABELS.get(entry.lesson.type, '')
+        content = _build_lesson_content(entry, lesson_type, classroom, teacher)
+        number = lesson_numbers.get(entry.time.begin, str(entry.time.id or ''))
+
+        co_groups = sorted({
+            group
+            for cls in entry.school_classes
+            if (group := normalize_group_name(cls.name))
+        })
+        if not co_groups or not content or not number:
+            continue
+
+        for group in co_groups:
+            weekday_data = schedule.setdefault(group, {}).setdefault(
+                weekday,
+                WeekDay(weekday=weekday, date='', lessons=[]),
+            )
+            lesson = Lesson(
+                content=content,
+                number=number,
+                group=group,
+                teacher=teacher,
+                classroom=classroom,
+                co_groups=co_groups.copy(),
+                conflict_groups=[],
+                raw=content,
+                weekday=weekday_data,
+                canceled=not entry.show_for_current_week,
+            )
+            if not any(i.number == lesson.number and i.content == lesson.content for i in weekday_data.lessons):
+                weekday_data.lessons.append(lesson)
+
+    result: dict[str, list[WeekDay]] = {}
+    for group in sorted(schedule):
+        days = []
+        for day in sorted(schedule[group].values(), key=lambda i: i.weekday):
+            day.lessons.sort(key=_lesson_sort_key)
+            numbers = {
+                int(float(i.number))
+                for i in day.lessons
+                if re.fullmatch(r'\d+(?:\.\d+)?', i.number)
+            }
+            if numbers:
+                for number in range(1, max(numbers) + 1):
+                    if number not in numbers:
+                        day.lessons.append(Lesson('', str(number), group, '', '', [], [], '', day))
+                day.lessons.sort(key=_lesson_sort_key)
+            days.append(day)
+        result[group] = days
+    return result
+
+
+def bind_groups_to_timetables(
+    timetables: list[Timetable],
+    groups: dict[str, list[WeekDay]],
+) -> None:
+    if not timetables:
+        return
+
+    timetable_texts: dict[str, str] = {
+        tt.name: _normalize_text_for_group_search(tt.text_content)
+        for tt in timetables
+    }
+    for tt in timetables:
+        tt.groups = {}
+
+    unmapped_groups: list[tuple[str, list[WeekDay]]] = []
+    for group, weekdays_data in groups.items():
+        candidates = [tt for tt in timetables if _is_group_in_timetable_text(group, timetable_texts.get(tt.name, ''))]
+        if candidates:
+            candidates.sort(
+                key=lambda tt: (
+                    len(tt.groups),
+                    -tt.date.year,
+                    -tt.date.month,
+                    -tt.date.day,
+                    tt.name,
+                )
+            )
+            selected = candidates[0]
+            selected.groups[group] = weekdays_data
+        else:
+            unmapped_groups.append((group, weekdays_data))
+
+    # Fallback: distribute unmapped groups so every group is present in Timetable.groups.
+    for group, weekdays_data in unmapped_groups:
+        selected = min(timetables, key=lambda tt: len(tt.groups))
+        selected.groups[group] = weekdays_data
+
+    for tt in timetables:
+        tt.notes = f'API linked groups: {len(tt.groups)}'
+    if unmapped_groups:
+        logger.warning(
+            'API groups not linked to pdf: %s/%s',
+            len(unmapped_groups),
+            len(groups),
+        )
+
+
+async def load_schedule_from_api(
+    timetables: list[Timetable],
+) -> tuple[dict[str, list[WeekDay]], str]:
+    async with aiohttp.ClientSession(trust_env=True) as session:
+        async with session.get(SCHEDULE_API_URL, timeout=aiohttp.ClientTimeout(20)) as response:
+            response.raise_for_status()
+            raw_payload = await response.text()
+
+    payload = json.loads(raw_payload)
+    rows = ((payload.get('payload') or {}).get('schedule') or {})
+    entries = [
+        ApiScheduleEntry.from_dict(item)
+        for lessons in rows.values()
+        for item in (lessons or [])
+        if isinstance(item, dict)
+    ]
+    groups = parse_schedule_from_api(entries)
+    bind_groups_to_timetables(timetables, groups)
+    schedule_hash = hashlib.sha256(raw_payload.encode('utf-8')).hexdigest()
+    return groups, schedule_hash
+
 
 def find_cogroups_in_timetables(timetables:list[Timetable]):
     for tt in timetables:
@@ -267,7 +465,6 @@ shorter_table = {
     'Информационные системы и программирование': 'прога',
     'Компьютерные системы и комплексы': 'железо',
 }
-from functools import reduce
 async def get_all_timetables()-> list[Timetable]:
     '''скачивает все pdf ки с сайта'''
     if not os.path.exists(cfg.base_dir / 'temp/pdf_files'): os.makedirs(cfg.base_dir / 'temp/pdf_files')
@@ -313,7 +510,7 @@ async def pdfs_to_image(bot, tts):
     for i in os.listdir(cfg.base_dir/'temp/images'): os.remove(cfg.base_dir/'temp/images'/i)
     for tt in tts:
         for page in pymupdf.Document(cfg.base_dir/'temp/pdf_files'/(tt.name+'.pdf')):
-            img = page.get_pixmap(dpi=100).tobytes()
+            img = page.get_pixmap(dpi=500).tobytes()
             msg = await bot.send_document(cfg.temp_group if cfg.temp_group else cfg.superuser, types.BufferedInputFile(img, filename=tt.name+'.png'),disable_notification=True)
             tt.images.append(msg.document.file_id)
 

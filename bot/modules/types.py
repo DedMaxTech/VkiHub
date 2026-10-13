@@ -273,7 +273,7 @@ class Lesson:
     
     @property
     def minimal(self):
-        return self.content.replace(self.classroom, '').replace(self.teacher, '')
+        return ' '.join(self.content.replace(self.classroom, '').replace(self.teacher, '').split())
     
     @property
     def other_cogroups(self): # todo refactor

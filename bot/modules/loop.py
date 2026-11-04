@@ -122,6 +122,8 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                         try:
                             if not user.timetable: continue
                             if user.timetable in new_teachers:
+                                if not any(wd.diffs for wd in new_teachers[user.timetable]):
+                                    continue
                                 await bot.send_message(user.id, f'(β) Вышло расписание для {user.timetable}\n\n' +'\n'.join([await wd.print(bot,user, hide_teacher=True, hide_my_group=False) for wd in new_teachers[user.timetable]]))
                                 continue
 
@@ -129,6 +131,8 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                             if ntt: # общая pdf ка
                                 changes = {gr: sum([len(wd.diffs) for wd in ntt.groups[gr]]) for gr in ntt.groups}
                                 changes = {gr: changes[gr] for gr in changes if changes[gr]}
+                                if not changes:
+                                    continue
                                 await send_timetable(user, f'Новое расписание для {ntt.as_str}\n\n(β)' + ('Изменения не найдены'
                                     if not changes else f'Найдены изменения для {",".join(f"{k}: {v}шт" for k, v in changes.items())}' + '\n\nЧтобы бот показывал детально показывал что куда перенесли, поставь в профиле расписание по конкретной группе'), ntt)
                                 continue
@@ -137,12 +141,13 @@ async def loop(bot: aiogram.Bot, sessionmaker: async_sessionmaker):
                             if group not in new_groups:
                                 continue
 
+                            changes_count = sum(len(wd.diffs) for wd in new_groups[group])
+                            if not changes_count:
+                                continue
+
                             grouped_timetable = next((tt for tt in new_timetables if group in tt.groups), None)
                             await send_timetable(user, f'(β) Новое расписание для {group}\n\n'+'\n'.join([await wd.print(bot, user, hide_teacher=False, hide_my_group=True) for wd in new_groups[group]]), grouped_timetable)
-                            changes_count = sum([len(wd.diffs) for wd in new_groups[group]])
-                            if not changes_count: 
-                                await bot.send_message(user.id, '(β) Изменения не найдены')
-                            elif changes_count > 20:
+                            if changes_count > 20:
                                 await bot.send_message(user.id, f'(β) {changes_count} изменений, расписания слишком сильно отличается')
                             else:
                                 s = '(β) Найдены изменения:\n'
